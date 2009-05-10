@@ -423,7 +423,7 @@ if __name__ == "__main__":
 
         if not conf['write'] and conf['read']:
             rdata = cmd.readMemory(conf['address'], conf['len'])
-            file(args[0], 'wb').write(rdata)
+            file(args[0], 'wb').write(''.join(map(chr,rdata)))
 
 #    cmd.cmdGo(addr + 0x04)
     finally:
