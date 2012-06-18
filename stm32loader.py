@@ -51,8 +51,8 @@ class CommandInterface:
             bytesize=8,             # number of databits
             parity=serial.PARITY_EVEN,
             stopbits=1,
-            xonxoff=0,              # enable software flow control
-            rtscts=0,               # disable RTS/CTS flow control
+            xonxoff=0,              # don't enable software flow control
+            rtscts=0,               # don't enable RTS/CTS flow control
             timeout=5               # set a timeout value, None for waiting forever
         )
 
