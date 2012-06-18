@@ -44,6 +44,8 @@ class CmdException(Exception):
     pass
 
 class CommandInterface:
+    extended_erase = 0
+
     def open(self, aport='/dev/tty.usbserial-ftCYPMYJ', abaudrate=115200) :
         self.sp = serial.Serial(
             port=aport,
@@ -106,6 +108,8 @@ class CommandInterface:
             version = ord(self.sp.read())
             mdebug(10, "    Bootloader version: "+hex(version))
             dat = map(lambda c: hex(ord(c)), self.sp.read(len))
+            if '0x44' in dat:
+                self.extended_erase = 1
             mdebug(10, "    Available commands: "+str(dat))
             self._wait_for_ask("0x00 end")
             return version
@@ -189,6 +193,9 @@ class CommandInterface:
 
 
     def cmdEraseMemory(self, sectors = None):
+        if self.extended_erase:
+            return cmd.cmdExtendedEraseMemory()
+
         if self.cmdGeneric(0x43):
             mdebug(10, "*** Erase memory command")
             if sectors is None:
@@ -207,6 +214,23 @@ class CommandInterface:
             mdebug(10, "    Erase memory done")
         else:
             raise CmdException("Erase memory (0x43) failed")
+
+    def cmdExtendedEraseMemory(self):
+        if self.cmdGeneric(0x44):
+            mdebug(10, "*** Extended Erase memory command")
+            # Global mass erase
+            self.sp.write(chr(0xFF))
+            self.sp.write(chr(0xFF))
+            # Checksum
+            self.sp.write(chr(0x00))
+            tmp = self.sp.timeout
+            self.sp.timeout = 30
+            print "Extended erase (0x44), this can take ten seconds or more"
+            self._wait_for_ask("0x44 erasing failed")
+            self.sp.timeout = tmp
+            mdebug(10, "    Extended Erase memory done")
+        else:
+            raise CmdException("Extended Erase memory (0x44) failed")
 
     def cmdWriteProtect(self, sectors):
         if self.cmdGeneric(0x63):
