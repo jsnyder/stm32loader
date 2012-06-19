@@ -35,6 +35,19 @@ except:
 # Verbose level
 QUIET = 20
 
+# these come from AN2606
+chip_ids = {
+    0x412: "STM32 Low-density",
+    0x410: "STM32 Medium-density",
+    0x414: "STM32 High-density",
+    0x420: "STM32 Medium-density value line",
+    0x428: "STM32 High-density value line",
+    0x430: "STM32 XL-density",
+    0x416: "STM32 Medium-density ultralow power line",
+    0x411: "STM32F2xx",
+    0x413: "STM32F4xx",
+}
+
 def mdebug(level, message):
     if(QUIET >= level):
         print >> sys.stderr , message
@@ -110,7 +123,7 @@ class CommandInterface:
             dat = map(lambda c: hex(ord(c)), self.sp.read(len))
             if '0x44' in dat:
                 self.extended_erase = 1
-            mdebug(10, "    Available commands: "+str(dat))
+            mdebug(10, "    Available commands: "+", ".join(dat))
             self._wait_for_ask("0x00 end")
             return version
         else:
@@ -133,7 +146,7 @@ class CommandInterface:
             len = ord(self.sp.read())
             id = self.sp.read(len+1)
             self._wait_for_ask("0x02 end")
-            return id
+            return reduce(lambda x, y: x*0x100+y, map(ord, id))
         else:
             raise CmdException("GetID (0x02) failed")
 
@@ -422,7 +435,8 @@ if __name__ == "__main__":
 
         bootversion = cmd.cmdGet()
         mdebug(0, "Bootloader version %X" % bootversion)
-        mdebug(0, "Chip id `%s'" % str(map(lambda c: hex(ord(c)), cmd.cmdGetID())))
+        id = cmd.cmdGetID()
+        mdebug(0, "Chip id: 0x%x (%s)" % (id, chip_ids.get(id, "Unknown")))
 #    cmd.cmdGetVersion()
 #    cmd.cmdGetID()
 #    cmd.cmdReadoutUnprotect()
