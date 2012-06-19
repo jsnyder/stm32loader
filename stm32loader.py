@@ -329,7 +329,7 @@ class CommandInterface:
 
 
 def usage():
-    print """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [file.bin]
+    print """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [-g addr] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
@@ -341,6 +341,7 @@ def usage():
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
     -a addr     Target address
+    -g addr     Address to start running at (0x08000000, usually)
 
     ./stm32loader.py -e -w -v example/main.bin
 
@@ -365,12 +366,13 @@ if __name__ == "__main__":
             'write': 0,
             'verify': 0,
             'read': 0,
+            'go_addr':-1,
         }
 
 # http://www.python.org/doc/2.5.2/lib/module-getopt.html
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"
@@ -401,6 +403,8 @@ if __name__ == "__main__":
             conf['baud'] = eval(a)
         elif o == '-a':
             conf['address'] = eval(a)
+        elif o == '-g':
+            conf['go_addr'] = eval(a)
         elif o == '-l':
             conf['len'] = eval(a)
         else:
@@ -449,7 +453,9 @@ if __name__ == "__main__":
             rdata = cmd.readMemory(conf['address'], conf['len'])
             file(args[0], 'wb').write(''.join(map(chr,rdata)))
 
-#    cmd.cmdGo(addr + 0x04)
+        if conf['go_addr'] != -1:
+            cmd.cmdGo(conf['go_addr'])
+
     finally:
         cmd.releaseChip()
 
