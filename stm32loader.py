@@ -402,7 +402,7 @@ if __name__ == "__main__":
 #    cmd.cmdWriteProtect([0, 1])
 
         if (conf['write'] or conf['verify']):
-            data = map(lambda c: ord(c), file(args[0]).read())
+            data = map(lambda c: ord(c), file(args[0], 'rb').read())
 
         if conf['erase']:
             cmd.cmdEraseMemory()
