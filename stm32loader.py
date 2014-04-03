@@ -35,6 +35,19 @@ except:
 # Verbose level
 QUIET = 20
 
+# these come from AN2606
+chip_ids = {
+    0x412: "STM32 Low-density",
+    0x410: "STM32 Medium-density",
+    0x414: "STM32 High-density",
+    0x420: "STM32 Medium-density value line",
+    0x428: "STM32 High-density value line",
+    0x430: "STM32 XL-density",
+    0x416: "STM32 Medium-density ultralow power line",
+    0x411: "STM32F2xx",
+    0x413: "STM32F4xx",
+}
+
 def mdebug(level, message):
     if(QUIET >= level):
         print >> sys.stderr , message
@@ -44,6 +57,8 @@ class CmdException(Exception):
     pass
 
 class CommandInterface:
+    extended_erase = 0
+
     def open(self, aport='/dev/tty.usbserial-ftCYPMYJ', abaudrate=115200) :
         self.sp = serial.Serial(
             port=aport,
@@ -51,8 +66,8 @@ class CommandInterface:
             bytesize=8,             # number of databits
             parity=serial.PARITY_EVEN,
             stopbits=1,
-            xonxoff=0,              # enable software flow control
-            rtscts=0,               # disable RTS/CTS flow control
+            xonxoff=0,              # don't enable software flow control
+            rtscts=0,               # don't enable RTS/CTS flow control
             timeout=5               # set a timeout value, None for waiting forever
         )
 
@@ -72,8 +87,8 @@ class CommandInterface:
                     # NACK
                     raise CmdException("NACK "+info)
                 else:
-                    # Unknow responce
-                    raise CmdException("Unknow response. "+info+": "+hex(ask))
+                    # Unknown responce
+                    raise CmdException("Unknown response. "+info+": "+hex(ask))
 
 
     def reset(self):
@@ -106,7 +121,9 @@ class CommandInterface:
             version = ord(self.sp.read())
             mdebug(10, "    Bootloader version: "+hex(version))
             dat = map(lambda c: hex(ord(c)), self.sp.read(len))
-            mdebug(10, "    Available commands: "+str(dat))
+            if '0x44' in dat:
+                self.extended_erase = 1
+            mdebug(10, "    Available commands: "+", ".join(dat))
             self._wait_for_ask("0x00 end")
             return version
         else:
@@ -129,7 +146,7 @@ class CommandInterface:
             len = ord(self.sp.read())
             id = self.sp.read(len+1)
             self._wait_for_ask("0x02 end")
-            return id
+            return reduce(lambda x, y: x*0x100+y, map(ord, id))
         else:
             raise CmdException("GetID (0x02) failed")
 
@@ -189,6 +206,9 @@ class CommandInterface:
 
 
     def cmdEraseMemory(self, sectors = None):
+        if self.extended_erase:
+            return cmd.cmdExtendedEraseMemory()
+
         if self.cmdGeneric(0x43):
             mdebug(10, "*** Erase memory command")
             if sectors is None:
@@ -207,6 +227,23 @@ class CommandInterface:
             mdebug(10, "    Erase memory done")
         else:
             raise CmdException("Erase memory (0x43) failed")
+
+    def cmdExtendedEraseMemory(self):
+        if self.cmdGeneric(0x44):
+            mdebug(10, "*** Extended Erase memory command")
+            # Global mass erase
+            self.sp.write(chr(0xFF))
+            self.sp.write(chr(0xFF))
+            # Checksum
+            self.sp.write(chr(0x00))
+            tmp = self.sp.timeout
+            self.sp.timeout = 30
+            print "Extended erase (0x44), this can take ten seconds or more"
+            self._wait_for_ask("0x44 erasing failed")
+            self.sp.timeout = tmp
+            mdebug(10, "    Extended Erase memory done")
+        else:
+            raise CmdException("Extended Erase memory (0x44) failed")
 
     def cmdWriteProtect(self, sectors):
         if self.cmdGeneric(0x63):
@@ -305,7 +342,7 @@ class CommandInterface:
 
 
 def usage():
-    print """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [file.bin]
+    print """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [-g addr] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
@@ -317,6 +354,7 @@ def usage():
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
     -a addr     Target address
+    -g addr     Address to start running at (0x08000000, usually)
 
     ./stm32loader.py -e -w -v example/main.bin
 
@@ -341,12 +379,13 @@ if __name__ == "__main__":
             'write': 0,
             'verify': 0,
             'read': 0,
+            'go_addr':-1,
         }
 
 # http://www.python.org/doc/2.5.2/lib/module-getopt.html
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"
@@ -377,6 +416,8 @@ if __name__ == "__main__":
             conf['baud'] = eval(a)
         elif o == '-a':
             conf['address'] = eval(a)
+        elif o == '-g':
+            conf['go_addr'] = eval(a)
         elif o == '-l':
             conf['len'] = eval(a)
         else:
@@ -394,7 +435,8 @@ if __name__ == "__main__":
 
         bootversion = cmd.cmdGet()
         mdebug(0, "Bootloader version %X" % bootversion)
-        mdebug(0, "Chip id `%s'" % str(map(lambda c: hex(ord(c)), cmd.cmdGetID())))
+        id = cmd.cmdGetID()
+        mdebug(0, "Chip id: 0x%x (%s)" % (id, chip_ids.get(id, "Unknown")))
 #    cmd.cmdGetVersion()
 #    cmd.cmdGetID()
 #    cmd.cmdReadoutUnprotect()
@@ -425,7 +467,9 @@ if __name__ == "__main__":
             rdata = cmd.readMemory(conf['address'], conf['len'])
             file(args[0], 'wb').write(''.join(map(chr,rdata)))
 
-#    cmd.cmdGo(addr + 0x04)
+        if conf['go_addr'] != -1:
+            cmd.cmdGo(conf['go_addr'])
+
     finally:
         cmd.releaseChip()
 
