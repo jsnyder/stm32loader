@@ -217,10 +217,14 @@ class CommandInterface:
                 self.sp.write(chr(0x00))
             else:
                 # Sectors erase
-                self.sp.write(chr((len(sectors)-1) & 0xFF))
-                crc = 0xFF
+                crc = 0x0
+
+                sec_len = (len(sectors)-1) & 0xff
+                crc ^= sec_len
+                self.sp.write(chr(sec_len))
+
                 for c in sectors:
-                    crc = crc ^ c
+                    crc ^= c
                     self.sp.write(chr(c))
                 self.sp.write(chr(crc))
             self._wait_for_ask("0x43 erasing failed")
