@@ -5,6 +5,8 @@ Python script which will talk to the STM32 bootloader to upload and download fir
 
 Original Version by: Ivan A-R <ivan@tuxotronic.org>
 
+Ported to Microython by Simon Larsson <snigelson@github>
+
 
 Usage: ./stm32loader.py [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [file.bin]
     -h          This help
