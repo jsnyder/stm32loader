@@ -334,10 +334,7 @@ class CommandInterface:
             mdebug(5, "Write %(len)d bytes at 0x%(addr)X" % {'addr': addr, 'len': 256})
         self.cmdWriteMemory(addr, data[offs:offs+lng] + ([0xFF] * (256-lng)) )
 
-
-
-
-	def __init__(self) :
+    def __init__(self) :
         pass
 
 
