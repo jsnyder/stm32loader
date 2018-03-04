@@ -14,9 +14,9 @@ Usage
     -h          This help
     -q          Quiet
     -V          Verbose
-    -e          Erase
+    -e          Erase (note: this is required on previously written memory)
     -w          Write
-    -v          Verify
+    -v          Verify (recommended)
     -r          Read
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
