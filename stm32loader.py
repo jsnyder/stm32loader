@@ -117,41 +117,40 @@ class CommandInterface:
         return self._wait_for_ask(hex(command))
 
     def get(self):
-        if self.generic(0x00):
-            debug(10, "*** Get interface")
-            length = ord(self.sp.read())
-            version = ord(self.sp.read())
-            debug(10, "    Bootloader version: " + hex(version))
-            data = [hex(ord(c)) for c in self.sp.read(length)]
-            if '0x44' in data:
-                self.extended_erase = 1
-            debug(10, "    Available commands: " + ", ".join(data))
-            self._wait_for_ask("0x00 end")
-            return version
-        else:
+        if not self.generic(0x00):
             raise CmdException("Get (0x00) failed")
+        debug(10, "*** Get interface")
+        length = ord(self.sp.read())
+        version = ord(self.sp.read())
+        debug(10, "    Bootloader version: " + hex(version))
+        data = [hex(ord(c)) for c in self.sp.read(length)]
+        if '0x44' in data:
+            self.extended_erase = 1
+        debug(10, "    Available commands: " + ", ".join(data))
+        self._wait_for_ask("0x00 end")
+        return version
 
     def get_version(self):
-        if self.generic(0x01):
-            debug(10, "*** GetVersion interface")
-            version = ord(self.sp.read())
-            self.sp.read(2)
-            self._wait_for_ask("0x01 end")
-            debug(10, "    Bootloader version: " + hex(version))
-            return version
-        else:
+        if not self.generic(0x01):
             raise CmdException("GetVersion (0x01) failed")
 
+        debug(10, "*** GetVersion interface")
+        version = ord(self.sp.read())
+        self.sp.read(2)
+        self._wait_for_ask("0x01 end")
+        debug(10, "    Bootloader version: " + hex(version))
+        return version
+
     def get_id(self):
-        if self.generic(0x02):
-            debug(10, "*** GetID interface")
-            length = ord(self.sp.read())
-            id_data = self.sp.read(length+1)
-            self._wait_for_ask("0x02 end")
-            _device_id = reduce(lambda x, y: x*0x100+y, map(ord, id_data))
-            return _device_id
-        else:
+        if not self.generic(0x02):
             raise CmdException("GetID (0x02) failed")
+
+        debug(10, "*** GetID interface")
+        length = ord(self.sp.read())
+        id_data = self.sp.read(length+1)
+        self._wait_for_ask("0x02 end")
+        _device_id = reduce(lambda x, y: x*0x100+y, map(ord, id_data))
+        return _device_id
 
     @staticmethod
     def _encode_address(address):
@@ -164,125 +163,125 @@ class CommandInterface:
 
     def read_memory(self, address, length):
         assert(length <= 256)
-        if self.generic(0x11):
-            debug(10, "*** ReadMemory interface")
-            self.sp.write(self._encode_address(address))
-            self._wait_for_ask("0x11 address failed")
-            n = (length - 1) & 0xFF
-            crc = n ^ 0xFF
-            self.sp.write(chr(n) + chr(crc))
-            self._wait_for_ask("0x11 length failed")
-            return [ord(c) for c in self.sp.read(length)]
-        else:
+        if not self.generic(0x11):
             raise CmdException("ReadMemory (0x11) failed")
 
+        debug(10, "*** ReadMemory interface")
+        self.sp.write(self._encode_address(address))
+        self._wait_for_ask("0x11 address failed")
+        n = (length - 1) & 0xFF
+        crc = n ^ 0xFF
+        self.sp.write(chr(n) + chr(crc))
+        self._wait_for_ask("0x11 length failed")
+        return [ord(c) for c in self.sp.read(length)]
+
     def go(self, address):
-        if self.generic(0x21):
-            debug(10, "*** Go interface")
-            self.sp.write(self._encode_address(address))
-            self._wait_for_ask("0x21 go failed")
-        else:
+        if not self.generic(0x21):
             raise CmdException("Go (0x21) failed")
+
+        debug(10, "*** Go interface")
+        self.sp.write(self._encode_address(address))
+        self._wait_for_ask("0x21 go failed")
 
     def write_memory(self, address, data):
         assert(len(data) <= 256)
-        if self.generic(0x31):
-            debug(10, "*** Write memory interface")
-            self.sp.write(self._encode_address(address))
-            self._wait_for_ask("0x31 address failed")
-            length = (len(data)-1) & 0xFF
-            debug(10, "    %s bytes to write" % [length + 1])
-            self.sp.write(chr(length))  # len really
-            crc = 0xFF
-            for c in data:
-                crc = crc ^ c
-                self.sp.write(chr(c))
-            self.sp.write(chr(crc))
-            self._wait_for_ask("0x31 programming failed")
-            debug(10, "    Write memory done")
-        else:
+        if not self.generic(0x31):
             raise CmdException("Write memory (0x31) failed")
+
+        debug(10, "*** Write memory interface")
+        self.sp.write(self._encode_address(address))
+        self._wait_for_ask("0x31 address failed")
+        length = (len(data)-1) & 0xFF
+        debug(10, "    %s bytes to write" % [length + 1])
+        self.sp.write(chr(length))  # len really
+        crc = 0xFF
+        for c in data:
+            crc = crc ^ c
+            self.sp.write(chr(c))
+        self.sp.write(chr(crc))
+        self._wait_for_ask("0x31 programming failed")
+        debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
             return interface.extended_erase_memory()
 
-        if self.generic(0x43):
-            debug(10, "*** Erase memory interface")
-            if sectors is None:
-                # Global erase
-                self.sp.write(chr(0xFF))
-                self.sp.write(chr(0x00))
-            else:
-                # Sectors erase
-                self.sp.write(chr((len(sectors)-1) & 0xFF))
-                crc = 0xFF
-                for c in sectors:
-                    crc = crc ^ c
-                    self.sp.write(chr(c))
-                self.sp.write(chr(crc))
-            self._wait_for_ask("0x43 erasing failed")
-            debug(10, "    Erase memory done")
-        else:
+        if not self.generic(0x43):
             raise CmdException("Erase memory (0x43) failed")
 
-    def extended_erase_memory(self):
-        if self.generic(0x44):
-            debug(10, "*** Extended Erase memory interface")
-            # Global mass erase
+        debug(10, "*** Erase memory interface")
+        if sectors is None:
+            # Global erase
             self.sp.write(chr(0xFF))
-            self.sp.write(chr(0xFF))
-            # Checksum
             self.sp.write(chr(0x00))
-            tmp = self.sp.timeout
-            self.sp.timeout = 30
-            print("Extended erase (0x44), this can take ten seconds or more")
-            self._wait_for_ask("0x44 erasing failed")
-            self.sp.timeout = tmp
-            debug(10, "    Extended Erase memory done")
         else:
-            raise CmdException("Extended Erase memory (0x44) failed")
-
-    def write_protect(self, sectors):
-        if self.generic(0x63):
-            debug(10, "*** Write protect interface")
+            # Sectors erase
             self.sp.write(chr((len(sectors)-1) & 0xFF))
             crc = 0xFF
             for c in sectors:
                 crc = crc ^ c
                 self.sp.write(chr(c))
             self.sp.write(chr(crc))
-            self._wait_for_ask("0x63 write protect failed")
-            debug(10, "    Write protect done")
-        else:
+        self._wait_for_ask("0x43 erasing failed")
+        debug(10, "    Erase memory done")
+
+    def extended_erase_memory(self):
+        if not self.generic(0x44):
+            raise CmdException("Extended Erase memory (0x44) failed")
+
+        debug(10, "*** Extended Erase memory interface")
+        # Global mass erase
+        self.sp.write(chr(0xFF))
+        self.sp.write(chr(0xFF))
+        # Checksum
+        self.sp.write(chr(0x00))
+        tmp = self.sp.timeout
+        self.sp.timeout = 30
+        print("Extended erase (0x44), this can take ten seconds or more")
+        self._wait_for_ask("0x44 erasing failed")
+        self.sp.timeout = tmp
+        debug(10, "    Extended Erase memory done")
+
+    def write_protect(self, sectors):
+        if not self.generic(0x63):
             raise CmdException("Write Protect memory (0x63) failed")
 
+        debug(10, "*** Write protect interface")
+        self.sp.write(chr((len(sectors)-1) & 0xFF))
+        crc = 0xFF
+        for c in sectors:
+            crc = crc ^ c
+            self.sp.write(chr(c))
+        self.sp.write(chr(crc))
+        self._wait_for_ask("0x63 write protect failed")
+        debug(10, "    Write protect done")
+
     def write_unprotect(self):
-        if self.generic(0x73):
-            debug(10, "*** Write Unprotect interface")
-            self._wait_for_ask("0x73 write unprotect failed")
-            self._wait_for_ask("0x73 write unprotect 2 failed")
-            debug(10, "    Write Unprotect done")
-        else:
+        if not self.generic(0x73):
             raise CmdException("Write Unprotect (0x73) failed")
 
+        debug(10, "*** Write Unprotect interface")
+        self._wait_for_ask("0x73 write unprotect failed")
+        self._wait_for_ask("0x73 write unprotect 2 failed")
+        debug(10, "    Write Unprotect done")
+
     def readout_protect(self):
-        if self.generic(0x82):
-            debug(10, "*** Readout protect interface")
-            self._wait_for_ask("0x82 readout protect failed")
-            self._wait_for_ask("0x82 readout protect 2 failed")
-            debug(10, "    Read protect done")
-        else:
+        if not self.generic(0x82):
             raise CmdException("Readout protect (0x82) failed")
 
+        debug(10, "*** Readout protect interface")
+        self._wait_for_ask("0x82 readout protect failed")
+        self._wait_for_ask("0x82 readout protect 2 failed")
+        debug(10, "    Read protect done")
+
     def readout_unprotect(self):
-        if self.generic(0x92):
-            debug(10, "*** Readout Unprotect interface")
-            self._wait_for_ask("0x92 readout unprotect failed")
-            self._wait_for_ask("0x92 readout unprotect 2 failed")
-            debug(10, "    Read Unprotect done")
-        else:
+        if not self.generic(0x92):
             raise CmdException("Readout unprotect (0x92) failed")
+
+        debug(10, "*** Readout Unprotect interface")
+        self._wait_for_ask("0x92 readout unprotect failed")
+        self._wait_for_ask("0x92 readout unprotect 2 failed")
+        debug(10, "    Read Unprotect done")
 
 
 # Complex commands section
