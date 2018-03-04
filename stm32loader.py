@@ -59,10 +59,10 @@ class CommandInterface:
     extended_erase = 0
 
     def __init__(self):
-        self.sp = None
+        self.serial = None
 
     def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
-        self.sp = serial.Serial(
+        self.serial = serial.Serial(
             port=a_port,
             baudrate=a_baud_rate,
             bytesize=8,             # number of write_data bits
@@ -76,7 +76,7 @@ class CommandInterface:
     def _wait_for_ask(self, info=""):
         # wait for ask
         try:
-            ask = ord(self.sp.read())
+            ask = self.serial.read()[0]
         except TypeError:
             raise CmdException("Can't read port or timeout")
         else:
@@ -92,38 +92,41 @@ class CommandInterface:
                     raise CmdException("Unknown response. "+info+": "+hex(ask))
 
     def reset(self):
-        self.sp.setDTR(0)
+        self.serial.setDTR(0)
         time.sleep(0.1)
-        self.sp.setDTR(1)
+        self.serial.setDTR(1)
         time.sleep(0.5)
 
     def init_chip(self):
         # Set boot
-        self.sp.setRTS(0)
+        self.serial.setRTS(0)
         self.reset()
 
         # Syncro
-        self.sp.write("\x7F")
+        self.serial.write(b'\x7F')
         return self._wait_for_ask("Syncro")
 
     def release_chip(self):
-        self.sp.setRTS(1)
+        self.serial.setRTS(1)
         self.reset()
 
     def generic(self, command):
-        self.sp.write(chr(command))
-        # control byte
-        self.sp.write(chr(command ^ 0xFF))
+        command_byte = bytes([command])
+        control_byte = bytes([command ^ 0xFF])
+
+        self.serial.write(command_byte)
+        self.serial.write(control_byte)
+
         return self._wait_for_ask(hex(command))
 
     def get(self):
         if not self.generic(0x00):
             raise CmdException("Get (0x00) failed")
         debug(10, "*** Get interface")
-        length = ord(self.sp.read())
-        version = ord(self.sp.read())
+        length = self.serial.read()[0]
+        version = self.serial.read()[0]
         debug(10, "    Bootloader version: " + hex(version))
-        data = [hex(ord(c)) for c in self.sp.read(length)]
+        data = [hex(c) for c in self.serial.read(length)]
         if '0x44' in data:
             self.extended_erase = 1
         debug(10, "    Available commands: " + ", ".join(data))
@@ -135,8 +138,8 @@ class CommandInterface:
             raise CmdException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
-        version = ord(self.sp.read())
-        self.sp.read(2)
+        version = self.serial.read()[0]
+        self.serial.read(2)
         self._wait_for_ask("0x01 end")
         debug(10, "    Bootloader version: " + hex(version))
         return version
@@ -146,10 +149,10 @@ class CommandInterface:
             raise CmdException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
-        length = ord(self.sp.read())
-        id_data = self.sp.read(length+1)
+        length = self.serial.read()[0]
+        id_data = self.serial.read(length + 1)
         self._wait_for_ask("0x02 end")
-        _device_id = reduce(lambda x, y: x*0x100+y, map(ord, id_data))
+        _device_id = reduce(lambda x, y: x*0x100+y, id_data)
         return _device_id
 
     @staticmethod
@@ -159,7 +162,7 @@ class CommandInterface:
         byte1 = (address >> 16) & 0xFF
         byte0 = (address >> 24) & 0xFF
         crc = byte0 ^ byte1 ^ byte2 ^ byte3
-        return chr(byte0) + chr(byte1) + chr(byte2) + chr(byte3) + chr(crc)
+        return bytes([byte0, byte1, byte2, byte3, crc])
 
     def read_memory(self, address, length):
         assert(length <= 256)
@@ -167,20 +170,20 @@ class CommandInterface:
             raise CmdException("ReadMemory (0x11) failed")
 
         debug(10, "*** ReadMemory interface")
-        self.sp.write(self._encode_address(address))
+        self.serial.write(self._encode_address(address))
         self._wait_for_ask("0x11 address failed")
         n = (length - 1) & 0xFF
         crc = n ^ 0xFF
-        self.sp.write(chr(n) + chr(crc))
+        self.serial.write(bytes([n, crc]))
         self._wait_for_ask("0x11 length failed")
-        return [ord(c) for c in self.sp.read(length)]
+        return self.serial.read(length)
 
     def go(self, address):
         if not self.generic(0x21):
             raise CmdException("Go (0x21) failed")
 
         debug(10, "*** Go interface")
-        self.sp.write(self._encode_address(address))
+        self.serial.write(self._encode_address(address))
         self._wait_for_ask("0x21 go failed")
 
     def write_memory(self, address, data):
@@ -189,16 +192,16 @@ class CommandInterface:
             raise CmdException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory interface")
-        self.sp.write(self._encode_address(address))
+        self.serial.write(self._encode_address(address))
         self._wait_for_ask("0x31 address failed")
         length = (len(data)-1) & 0xFF
         debug(10, "    %s bytes to write" % [length + 1])
-        self.sp.write(chr(length))  # len really
+        self.serial.write(bytes([length]))
         crc = 0xFF
         for c in data:
             crc = crc ^ c
-            self.sp.write(chr(c))
-        self.sp.write(chr(crc))
+            self.serial.write(bytes([c]))
+        self.serial.write(bytes([crc]))
         self._wait_for_ask("0x31 programming failed")
         debug(10, "    Write memory done")
 
@@ -212,16 +215,16 @@ class CommandInterface:
         debug(10, "*** Erase memory interface")
         if sectors is None:
             # Global erase
-            self.sp.write(chr(0xFF))
-            self.sp.write(chr(0x00))
+            self.serial.write(b'\xff')
+            self.serial.write(b'\x00')
         else:
             # Sectors erase
-            self.sp.write(chr((len(sectors)-1) & 0xFF))
+            self.serial.write(bytes([(len(sectors) - 1) & 0xFF]))
             crc = 0xFF
             for c in sectors:
                 crc = crc ^ c
-                self.sp.write(chr(c))
-            self.sp.write(chr(crc))
+                self.serial.write(bytes([c]))
+            self.serial.write(bytes([crc]))
         self._wait_for_ask("0x43 erasing failed")
         debug(10, "    Erase memory done")
 
@@ -230,16 +233,15 @@ class CommandInterface:
             raise CmdException("Extended Erase memory (0x44) failed")
 
         debug(10, "*** Extended Erase memory interface")
-        # Global mass erase
-        self.sp.write(chr(0xFF))
-        self.sp.write(chr(0xFF))
-        # Checksum
-        self.sp.write(chr(0x00))
-        tmp = self.sp.timeout
-        self.sp.timeout = 30
+        # Global mass erase and checksum byte
+        self.serial.write(b'\xFF')
+        self.serial.write(b'\xFF')
+        self.serial.write(b'\x00')
+        tmp = self.serial.timeout
+        self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
         self._wait_for_ask("0x44 erasing failed")
-        self.sp.timeout = tmp
+        self.serial.timeout = tmp
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, sectors):
@@ -247,12 +249,12 @@ class CommandInterface:
             raise CmdException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
-        self.sp.write(chr((len(sectors)-1) & 0xFF))
+        self.serial.write(bytes([((len(sectors) - 1) & 0xFF)]))
         crc = 0xFF
         for c in sectors:
             crc = crc ^ c
-            self.sp.write(chr(c))
-        self.sp.write(chr(crc))
+            self.serial.write(bytes([c]))
+        self.serial.write(bytes([crc]))
         self._wait_for_ask("0x63 write protect failed")
         debug(10, "    Write protect done")
 
@@ -287,7 +289,7 @@ class CommandInterface:
 # Complex commands section
 
     def read_memory_data(self, address, length):
-        data = []
+        data = bytearray()
         while length > 256:
             debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
             data = data + self.read_memory(address, 256)
@@ -309,7 +311,7 @@ class CommandInterface:
             length = length - 256
         else:
             debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-        self.write_memory(address, data[offs:offs + length] + ([0xFF] * (256 - length)))
+        self.write_memory(address, data[offs:offs + length] + (b'\xff' * (256 - length)))
 
 
 def usage():
