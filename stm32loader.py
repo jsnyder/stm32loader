@@ -214,7 +214,7 @@ class CommandInterface:
 
         debug(10, "*** Erase memory interface")
         if sectors is None:
-            # Global erase
+            # Global erase and checksum byte
             self.serial.write(b'\xff')
             self.serial.write(b'\x00')
         else:
@@ -394,7 +394,7 @@ if __name__ == "__main__":
         elif o == '-g':
             configuration['go_address'] = eval(a)
         elif o == '-l':
-            configuration['len'] = eval(a)
+            configuration['length'] = eval(a)
         else:
             assert False, "unhandled option"
 
@@ -417,31 +417,32 @@ if __name__ == "__main__":
 #    interface.write_unprotect()
 #    interface.write_protect([0, 1])
 
-        write_data = None
+        binary_data = None
+        data_file = args[0] if args else None
 
         if configuration['write'] or configuration['verify']:
-            write_data = open(args[0], 'rb').read()
+            binary_data = open(data_file, 'rb').read()
 
         if configuration['erase']:
             interface.erase_memory()
 
         if configuration['write']:
-            interface.write_memory_data(configuration['address'], write_data)
+            interface.write_memory_data(configuration['address'], binary_data)
 
         if configuration['verify']:
-            verify = interface.read_memory_data(configuration['address'], len(write_data))
-            if write_data == verify:
+            read_data = interface.read_memory_data(configuration['address'], len(binary_data))
+            if binary_data == read_data:
                 print("Verification OK")
             else:
                 print("Verification FAILED")
-                print(str(len(write_data)) + ' vs ' + str(len(verify)))
-                for i in range(0, len(write_data)):
-                    if write_data[i] != verify[i]:
-                        print(hex(i) + ': ' + hex(write_data[i]) + ' vs ' + hex(verify[i]))
+                print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
+                for i in range(0, len(binary_data)):
+                    if binary_data[i] != read_data[i]:
+                        print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
 
         if not configuration['write'] and configuration['read']:
-            read_data = interface.read_memory_data(configuration['address'], configuration['len'])
-            open(args[0], 'wb').write(read_data)
+            read_data = interface.read_memory_data(configuration['address'], configuration['length'])
+            open(data_file, 'wb').write(read_data)
 
         if configuration['go_address'] != -1:
             interface.go(configuration['go_address'])
