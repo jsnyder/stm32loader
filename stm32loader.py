@@ -4,7 +4,7 @@
 # vim: sw=4:ts=4:si:et:enc=utf-8
 
 # Author: Ivan A-R <ivan@tuxotronic.org>
-# Project page: http://tuxotronic.org/wiki/projects/stm32loader
+# GitHub repository: https://github.com/jsnyder/stm32loader
 #
 # This file is part of stm32loader.
 #
@@ -22,21 +22,18 @@
 # along with stm32loader; see the file COPYING3.  If not see
 # <http://www.gnu.org/licenses/>.
 
-import sys, getopt
+from functools import reduce
+import sys
+import getopt
 import serial
 import time
 
-try:
-    from progressbar import *
-    usepbar = 1
-except:
-    usepbar = 0
 
 # Verbose level
 QUIET = 20
 
-# these come from AN2606
-chip_ids = {
+CHIP_IDS = {
+    # see ST AN2606
     0x412: "STM32 Low-density",
     0x410: "STM32 Medium-density",
     0x414: "STM32 High-density",
@@ -48,22 +45,49 @@ chip_ids = {
     0x413: "STM32F4xx",
 }
 
-def mdebug(level, message):
-    if(QUIET >= level):
-        print >> sys.stderr , message
+
+def debug(level, message):
+    if QUIET >= level:
+        print(message, file=sys.stderr)
 
 
 class CmdException(Exception):
     pass
 
+
 class CommandInterface:
+
+    class Command:
+        # See ST AN3155
+        GET = 0x00
+        GET_VERSION = 0x01
+        GET_ID = 0x02
+        READ_MEMORY = 0x11
+        GO = 0x21
+        WRITE_MEMORY = 0x31
+        ERASE = 0x43
+        EXTENDED_ERASE = 0x44
+        WRITE_PROTECT = 0x63
+        WRITE_UNPROTECT = 0x73
+        READOUT_PROTECT = 0x82
+        READOUT_UNPROTECT = 0x92
+
+    class Reply:
+        # See ST AN3155
+        ACK = 0x79
+        NACK = 0x1F
+        EXTENDED_ERASE = 0x44
+
     extended_erase = 0
 
-    def open(self, aport='/dev/tty.usbserial-ftCYPMYJ', abaudrate=115200) :
-        self.sp = serial.Serial(
-            port=aport,
-            baudrate=abaudrate,     # baudrate
-            bytesize=8,             # number of databits
+    def __init__(self):
+        self.serial = None
+
+    def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
+        self.serial = serial.Serial(
+            port=a_port,
+            baudrate=a_baud_rate,
+            bytesize=8,             # number of write_data bits
             parity=serial.PARITY_EVEN,
             stopbits=1,
             xonxoff=0,              # don't enable software flow control
@@ -71,324 +95,289 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-
-    def _wait_for_ask(self, info = ""):
-        # wait for ask
-        try:
-            ask = ord(self.sp.read())
-        except:
-            raise CmdException("Can't read port or timeout")
-        else:
-            if ask == 0x79:
-                # ACK
-                return 1
-            else:
-                if ask == 0x1F:
-                    # NACK
-                    raise CmdException("NACK "+info)
-                else:
-                    # Unknown responce
-                    raise CmdException("Unknown response. "+info+": "+hex(ask))
-
-
     def reset(self):
-        self.sp.setDTR(0)
+        self.serial.setDTR(0)
         time.sleep(0.1)
-        self.sp.setDTR(1)
+        self.serial.setDTR(1)
         time.sleep(0.5)
 
-    def initChip(self):
+    def init_chip(self):
         # Set boot
-        self.sp.setRTS(0)
+        self.serial.setRTS(0)
         self.reset()
 
-        self.sp.write("\x7F")       # Syncro
-        return self._wait_for_ask("Syncro")
+        # Syncro
+        self.serial.write(b'\x7F')
+        return self._wait_for_ack("Syncro")
 
-    def releaseChip(self):
-        self.sp.setRTS(1)
+    def release_chip(self):
+        self.serial.setRTS(1)
         self.reset()
 
-    def cmdGeneric(self, cmd):
-        self.sp.write(chr(cmd))
-        self.sp.write(chr(cmd ^ 0xFF)) # Control byte
-        return self._wait_for_ask(hex(cmd))
+    def command(self, command):
+        command_byte = bytes([command])
+        control_byte = bytes([command ^ 0xFF])
 
-    def cmdGet(self):
-        if self.cmdGeneric(0x00):
-            mdebug(10, "*** Get command");
-            len = ord(self.sp.read())
-            version = ord(self.sp.read())
-            mdebug(10, "    Bootloader version: "+hex(version))
-            dat = map(lambda c: hex(ord(c)), self.sp.read(len))
-            if '0x44' in dat:
-                self.extended_erase = 1
-            mdebug(10, "    Available commands: "+", ".join(dat))
-            self._wait_for_ask("0x00 end")
-            return version
-        else:
+        self.serial.write(command_byte)
+        self.serial.write(control_byte)
+
+        return self._wait_for_ack(hex(command))
+
+    def get(self):
+        if not self.command(self.Command.GET):
             raise CmdException("Get (0x00) failed")
+        debug(10, "*** Get interface")
+        length = self.serial.read()[0]
+        version = self.serial.read()[0]
+        debug(10, "    Bootloader version: " + hex(version))
+        data = self.serial.read(length)
+        if self.Reply.EXTENDED_ERASE in data:
+            self.extended_erase = 1
+        debug(10, "    Available commands: " + ", ".join(data))
+        self._wait_for_ack("0x00 end")
+        return version
 
-    def cmdGetVersion(self):
-        if self.cmdGeneric(0x01):
-            mdebug(10, "*** GetVersion command")
-            version = ord(self.sp.read())
-            self.sp.read(2)
-            self._wait_for_ask("0x01 end")
-            mdebug(10, "    Bootloader version: "+hex(version))
-            return version
-        else:
+    def get_version(self):
+        if not self.command(self.Command.GET_VERSION):
             raise CmdException("GetVersion (0x01) failed")
 
-    def cmdGetID(self):
-        if self.cmdGeneric(0x02):
-            mdebug(10, "*** GetID command")
-            len = ord(self.sp.read())
-            id = self.sp.read(len+1)
-            self._wait_for_ask("0x02 end")
-            return reduce(lambda x, y: x*0x100+y, map(ord, id))
-        else:
+        debug(10, "*** GetVersion interface")
+        version = self.serial.read()[0]
+        self.serial.read(2)
+        self._wait_for_ack("0x01 end")
+        debug(10, "    Bootloader version: " + hex(version))
+        return version
+
+    def get_id(self):
+        if not self.command(self.Command.GET_ID):
             raise CmdException("GetID (0x02) failed")
 
+        debug(10, "*** GetID interface")
+        length = self.serial.read()[0]
+        id_data = self.serial.read(length + 1)
+        self._wait_for_ack("0x02 end")
+        _device_id = reduce(lambda x, y: x*0x100+y, id_data)
+        return _device_id
 
-    def _encode_addr(self, addr):
-        byte3 = (addr >> 0) & 0xFF
-        byte2 = (addr >> 8) & 0xFF
-        byte1 = (addr >> 16) & 0xFF
-        byte0 = (addr >> 24) & 0xFF
-        crc = byte0 ^ byte1 ^ byte2 ^ byte3
-        return (chr(byte0) + chr(byte1) + chr(byte2) + chr(byte3) + chr(crc))
-
-
-    def cmdReadMemory(self, addr, lng):
-        assert(lng <= 256)
-        if self.cmdGeneric(0x11):
-            mdebug(10, "*** ReadMemory command")
-            self.sp.write(self._encode_addr(addr))
-            self._wait_for_ask("0x11 address failed")
-            N = (lng - 1) & 0xFF
-            crc = N ^ 0xFF
-            self.sp.write(chr(N) + chr(crc))
-            self._wait_for_ask("0x11 length failed")
-            return map(lambda c: ord(c), self.sp.read(lng))
-        else:
+    def read_memory(self, address, length):
+        assert(length <= 256)
+        if not self.command(self.Command.READ_MEMORY):
             raise CmdException("ReadMemory (0x11) failed")
 
+        debug(10, "*** ReadMemory interface")
+        self.serial.write(self._encode_address(address))
+        self._wait_for_ack("0x11 address failed")
+        n = (length - 1) & 0xFF
+        checksum = n ^ 0xFF
+        self.serial.write(bytes([n, checksum]))
+        self._wait_for_ack("0x11 length failed")
+        return self.serial.read(length)
 
-    def cmdGo(self, addr):
-        if self.cmdGeneric(0x21):
-            mdebug(10, "*** Go command")
-            self.sp.write(self._encode_addr(addr))
-            self._wait_for_ask("0x21 go failed")
-        else:
+    def go(self, address):
+        if not self.command(self.Command.GO):
             raise CmdException("Go (0x21) failed")
 
+        debug(10, "*** Go interface")
+        self.serial.write(self._encode_address(address))
+        self._wait_for_ack("0x21 go failed")
 
-    def cmdWriteMemory(self, addr, data):
+    def write_memory(self, address, data):
         assert(len(data) <= 256)
-        if self.cmdGeneric(0x31):
-            mdebug(10, "*** Write memory command")
-            self.sp.write(self._encode_addr(addr))
-            self._wait_for_ask("0x31 address failed")
-            #map(lambda c: hex(ord(c)), data)
-            lng = (len(data)-1) & 0xFF
-            mdebug(10, "    %s bytes to write" % [lng+1]);
-            self.sp.write(chr(lng)) # len really
-            crc = 0xFF
-            for c in data:
-                crc = crc ^ c
-                self.sp.write(chr(c))
-            self.sp.write(chr(crc))
-            self._wait_for_ask("0x31 programming failed")
-            mdebug(10, "    Write memory done")
-        else:
+        if not self.command(self.Command.WRITE_MEMORY):
             raise CmdException("Write memory (0x31) failed")
 
+        debug(10, "*** Write memory interface")
+        self.serial.write(self._encode_address(address))
+        self._wait_for_ack("0x31 address failed")
+        length = (len(data)-1) & 0xFF
+        debug(10, "    %s bytes to write" % [length + 1])
+        self.serial.write(bytes([length]))
+        checksum = 0xFF
+        for c in data:
+            checksum = checksum ^ c
+            self.serial.write(bytes([c]))
+        self.serial.write(bytes([checksum]))
+        self._wait_for_ack("0x31 programming failed")
+        debug(10, "    Write memory done")
 
-    def cmdEraseMemory(self, sectors = None):
+    def erase_memory(self, sectors=None):
         if self.extended_erase:
-            return cmd.cmdExtendedEraseMemory()
+            return interface.extended_erase_memory()
 
-        if self.cmdGeneric(0x43):
-            mdebug(10, "*** Erase memory command")
-            if sectors is None:
-                # Global erase
-                self.sp.write(chr(0xFF))
-                self.sp.write(chr(0x00))
-            else:
-                # Sectors erase
-                self.sp.write(chr((len(sectors)-1) & 0xFF))
-                crc = 0xFF
-                for c in sectors:
-                    crc = crc ^ c
-                    self.sp.write(chr(c))
-                self.sp.write(chr(crc))
-            self._wait_for_ask("0x43 erasing failed")
-            mdebug(10, "    Erase memory done")
-        else:
+        if not self.command(self.Command.ERASE):
             raise CmdException("Erase memory (0x43) failed")
 
-    def cmdExtendedEraseMemory(self):
-        if self.cmdGeneric(0x44):
-            mdebug(10, "*** Extended Erase memory command")
-            # Global mass erase
-            self.sp.write(chr(0xFF))
-            self.sp.write(chr(0xFF))
-            # Checksum
-            self.sp.write(chr(0x00))
-            tmp = self.sp.timeout
-            self.sp.timeout = 30
-            print "Extended erase (0x44), this can take ten seconds or more"
-            self._wait_for_ask("0x44 erasing failed")
-            self.sp.timeout = tmp
-            mdebug(10, "    Extended Erase memory done")
+        debug(10, "*** Erase memory interface")
+
+        if sectors:
+            self._page_erase(sectors)
         else:
+            self._global_erase()
+        self._wait_for_ack("0x43 erase failed")
+        debug(10, "    Erase memory done")
+
+    def extended_erase_memory(self):
+        if not self.command(self.Command.EXTENDED_ERASE):
             raise CmdException("Extended Erase memory (0x44) failed")
 
-    def cmdWriteProtect(self, sectors):
-        if self.cmdGeneric(0x63):
-            mdebug(10, "*** Write protect command")
-            self.sp.write(chr((len(sectors)-1) & 0xFF))
-            crc = 0xFF
-            for c in sectors:
-                crc = crc ^ c
-                self.sp.write(chr(c))
-            self.sp.write(chr(crc))
-            self._wait_for_ask("0x63 write protect failed")
-            mdebug(10, "    Write protect done")
-        else:
+        debug(10, "*** Extended Erase memory interface")
+        # Global mass erase and checksum byte
+        self.serial.write(b'\xFF')
+        self.serial.write(b'\xFF')
+        self.serial.write(b'\x00')
+        tmp = self.serial.timeout
+        self.serial.timeout = 30
+        print("Extended erase (0x44), this can take ten seconds or more")
+        self._wait_for_ack("0x44 erasing failed")
+        self.serial.timeout = tmp
+        debug(10, "    Extended Erase memory done")
+
+    def write_protect(self, sectors):
+        if not self.command(self.Command.WRITE_PROTECT):
             raise CmdException("Write Protect memory (0x63) failed")
 
-    def cmdWriteUnprotect(self):
-        if self.cmdGeneric(0x73):
-            mdebug(10, "*** Write Unprotect command")
-            self._wait_for_ask("0x73 write unprotect failed")
-            self._wait_for_ask("0x73 write unprotect 2 failed")
-            mdebug(10, "    Write Unprotect done")
-        else:
+        debug(10, "*** Write protect interface")
+        self.serial.write(bytes([((len(sectors) - 1) & 0xFF)]))
+        checksum = 0xFF
+        for c in sectors:
+            checksum = checksum ^ c
+            self.serial.write(bytes([c]))
+        self.serial.write(bytes([checksum]))
+        self._wait_for_ack("0x63 write protect failed")
+        debug(10, "    Write protect done")
+
+    def write_unprotect(self):
+        if not self.command(self.Command.WRITE_UNPROTECT):
             raise CmdException("Write Unprotect (0x73) failed")
 
-    def cmdReadoutProtect(self):
-        if self.cmdGeneric(0x82):
-            mdebug(10, "*** Readout protect command")
-            self._wait_for_ask("0x82 readout protect failed")
-            self._wait_for_ask("0x82 readout protect 2 failed")
-            mdebug(10, "    Read protect done")
-        else:
+        debug(10, "*** Write Unprotect interface")
+        self._wait_for_ack("0x73 write unprotect failed")
+        self._wait_for_ack("0x73 write unprotect 2 failed")
+        debug(10, "    Write Unprotect done")
+
+    def readout_protect(self):
+        if not self.command(self.Command.READOUT_PROTECT):
             raise CmdException("Readout protect (0x82) failed")
 
-    def cmdReadoutUnprotect(self):
-        if self.cmdGeneric(0x92):
-            mdebug(10, "*** Readout Unprotect command")
-            self._wait_for_ask("0x92 readout unprotect failed")
-            self._wait_for_ask("0x92 readout unprotect 2 failed")
-            mdebug(10, "    Read Unprotect done")
-        else:
+        debug(10, "*** Readout protect interface")
+        self._wait_for_ack("0x82 readout protect failed")
+        self._wait_for_ack("0x82 readout protect 2 failed")
+        debug(10, "    Read protect done")
+
+    def readout_unprotect(self):
+        if not self.command(self.Command.READOUT_UNPROTECT):
             raise CmdException("Readout unprotect (0x92) failed")
 
+        debug(10, "*** Readout Unprotect interface")
+        self._wait_for_ack("0x92 readout unprotect failed")
+        self._wait_for_ack("0x92 readout unprotect 2 failed")
+        debug(10, "    Read Unprotect done")
 
-# Complex commands section
-
-    def readMemory(self, addr, lng):
-        data = []
-        if usepbar:
-            widgets = ['Reading: ', Percentage(),', ', ETA(), ' ', Bar()]
-            pbar = ProgressBar(widgets=widgets,maxval=lng, term_width=79).start()
-        
-        while lng > 256:
-            if usepbar:
-                pbar.update(pbar.maxval-lng)
-            else:
-                mdebug(5, "Read %(len)d bytes at 0x%(addr)X" % {'addr': addr, 'len': 256})
-            data = data + self.cmdReadMemory(addr, 256)
-            addr = addr + 256
-            lng = lng - 256
-        if usepbar:
-            pbar.update(pbar.maxval-lng)
-            pbar.finish()
+    def read_memory_data(self, address, length):
+        data = bytearray()
+        while length > 256:
+            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
+            data = data + self.read_memory(address, 256)
+            address = address + 256
+            length = length - 256
         else:
-            mdebug(5, "Read %(len)d bytes at 0x%(addr)X" % {'addr': addr, 'len': 256})
-        data = data + self.cmdReadMemory(addr, lng)
+            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
+        data = data + self.read_memory(address, length)
         return data
 
-    def writeMemory(self, addr, data):
-        lng = len(data)
-        if usepbar:
-            widgets = ['Writing: ', Percentage(),' ', ETA(), ' ', Bar()]
-            pbar = ProgressBar(widgets=widgets, maxval=lng, term_width=79).start()
-        
+    def write_memory_data(self, address, data):
+        length = len(data)
         offs = 0
-        while lng > 256:
-            if usepbar:
-                pbar.update(pbar.maxval-lng)
-            else:
-                mdebug(5, "Write %(len)d bytes at 0x%(addr)X" % {'addr': addr, 'len': 256})
-            self.cmdWriteMemory(addr, data[offs:offs+256])
+        while length > 256:
+            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
+            self.write_memory(address, data[offs:offs + 256])
             offs = offs + 256
-            addr = addr + 256
-            lng = lng - 256
-        if usepbar:
-            pbar.update(pbar.maxval-lng)
-            pbar.finish()
+            address = address + 256
+            length = length - 256
         else:
-            mdebug(5, "Write %(len)d bytes at 0x%(addr)X" % {'addr': addr, 'len': 256})
-        self.cmdWriteMemory(addr, data[offs:offs+lng] + ([0xFF] * (256-lng)) )
+            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
+        self.write_memory(address, data[offs:offs + length] + (b'\xff' * (256 - length)))
 
+    def _global_erase(self):
+        # global erase: n=255, see ST AN3155
+        self.serial.write(b'\xff')
+        self.serial.write(b'\x00')
 
+    def _page_erase(self, pages):
+        # page erase, see ST AN3155
+        nr_of_pages = (len(pages) - 1) & 0xFF
+        self.serial.write(bytes([nr_of_pages]))
+        checksum = nr_of_pages
+        for page_number in pages:
+            self.serial.write(bytes([page_number]))
+            checksum = checksum ^ page_number
+        self.serial.write(bytes([checksum]))
 
+    def _wait_for_ack(self, info=""):
+        try:
+            ack = self.serial.read()[0]
+        except TypeError:
+            raise CmdException("Can't read port or timeout")
 
-	def __init__(self) :
-        pass
+        if ack == self.Reply.NACK:
+            raise CmdException("NACK " + info)
+
+        if ack != self.Reply.ACK:
+            raise CmdException("Unknown response. " + info + ": " + hex(ack))
+
+        return 1
+
+    @staticmethod
+    def _encode_address(address):
+        byte3 = (address >> 0) & 0xFF
+        byte2 = (address >> 8) & 0xFF
+        byte1 = (address >> 16) & 0xFF
+        byte0 = (address >> 24) & 0xFF
+        checksum = byte0 ^ byte1 ^ byte2 ^ byte3
+        return bytes([byte0, byte1, byte2, byte3, checksum])
 
 
 def usage():
-    print """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [-g addr] [file.bin]
+    help_text = """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
-    -e          Erase
+    -e          Erase (note: this is required on previously written memory)
     -w          Write
-    -v          Verify
+    -v          Verify (recommended)
     -r          Read
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
-    -a addr     Target address
-    -g addr     Address to start running at (0x08000000, usually)
+    -a address  Target address
+    -g address  Address to start running at (0x08000000, usually)
 
     ./stm32loader.py -e -w -v example/main.bin
-
-    """ % sys.argv[0]
+    """
+    help_text = help_text % sys.argv[0]
+    print(help_text)
 
 
 if __name__ == "__main__":
     
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print "Using Psyco..."
-    except ImportError:
-        pass
-
-    conf = {
-            'port': '/dev/tty.usbserial-ftCYPMYJ',
-            'baud': 115200,
-            'address': 0x08000000,
-            'erase': 0,
-            'write': 0,
-            'verify': 0,
-            'read': 0,
-            'go_addr':-1,
-        }
-
-# http://www.python.org/doc/2.5.2/lib/module-getopt.html
+    configuration = {
+        'port': '/dev/tty.usbserial-ftCYPMYJ',
+        'baud': 115200,
+        'address': 0x08000000,
+        'erase': 0,
+        'write': 0,
+        'verify': 0,
+        'read': 0,
+        'go_address': -1,
+    }
 
     try:
+        # parse command-line arguments using getopt
         opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         # print help information and exit:
-        print str(err) # will print something like "option -a not recognized"
+        # this print something like "option -a not recognized"
+        print(str(err))
         usage()
         sys.exit(2)
 
@@ -403,73 +392,69 @@ if __name__ == "__main__":
             usage()
             sys.exit(0)
         elif o == '-e':
-            conf['erase'] = 1
+            configuration['erase'] = 1
         elif o == '-w':
-            conf['write'] = 1
+            configuration['write'] = 1
         elif o == '-v':
-            conf['verify'] = 1
+            configuration['verify'] = 1
         elif o == '-r':
-            conf['read'] = 1
+            configuration['read'] = 1
         elif o == '-p':
-            conf['port'] = a
+            configuration['port'] = a
         elif o == '-b':
-            conf['baud'] = eval(a)
+            configuration['baud'] = eval(a)
         elif o == '-a':
-            conf['address'] = eval(a)
+            configuration['address'] = eval(a)
         elif o == '-g':
-            conf['go_addr'] = eval(a)
+            configuration['go_address'] = eval(a)
         elif o == '-l':
-            conf['len'] = eval(a)
+            configuration['length'] = eval(a)
         else:
             assert False, "unhandled option"
 
-    cmd = CommandInterface()
-    cmd.open(conf['port'], conf['baud'])
-    mdebug(10, "Open port %(port)s, baud %(baud)d" % {'port':conf['port'], 'baud':conf['baud']})
+    interface = CommandInterface()
+    interface.open(configuration['port'], configuration['baud'])
+    debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
         try:
-            cmd.initChip()
-        except:
-            print "Can't init. Ensure that BOOT0 is enabled and reset device"
+            interface.init_chip()
+        except Exception:
+            print("Can't init. Ensure that BOOT0 is enabled and reset device")
 
+        boot_version = interface.get()
+        debug(0, "Bootloader version %X" % boot_version)
+        device_id = interface.get_id()
+        debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 
-        bootversion = cmd.cmdGet()
-        mdebug(0, "Bootloader version %X" % bootversion)
-        id = cmd.cmdGetID()
-        mdebug(0, "Chip id: 0x%x (%s)" % (id, chip_ids.get(id, "Unknown")))
-#    cmd.cmdGetVersion()
-#    cmd.cmdGetID()
-#    cmd.cmdReadoutUnprotect()
-#    cmd.cmdWriteUnprotect()
-#    cmd.cmdWriteProtect([0, 1])
+        binary_data = None
+        data_file = args[0] if args else None
 
-        if (conf['write'] or conf['verify']):
-            data = map(lambda c: ord(c), file(args[0], 'rb').read())
+        if configuration['write'] or configuration['verify']:
+            binary_data = open(data_file, 'rb').read()
 
-        if conf['erase']:
-            cmd.cmdEraseMemory()
+        if configuration['erase']:
+            interface.erase_memory()
 
-        if conf['write']:
-            cmd.writeMemory(conf['address'], data)
+        if configuration['write']:
+            interface.write_memory_data(configuration['address'], binary_data)
 
-        if conf['verify']:
-            verify = cmd.readMemory(conf['address'], len(data))
-            if(data == verify):
-                print "Verification OK"
+        if configuration['verify']:
+            read_data = interface.read_memory_data(configuration['address'], len(binary_data))
+            if binary_data == read_data:
+                print("Verification OK")
             else:
-                print "Verification FAILED"
-                print str(len(data)) + ' vs ' + str(len(verify))
-                for i in xrange(0, len(data)):
-                    if data[i] != verify[i]:
-                        print hex(i) + ': ' + hex(data[i]) + ' vs ' + hex(verify[i])
+                print("Verification FAILED")
+                print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
+                for i in range(0, len(binary_data)):
+                    if binary_data[i] != read_data[i]:
+                        print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
 
-        if not conf['write'] and conf['read']:
-            rdata = cmd.readMemory(conf['address'], conf['len'])
-            file(args[0], 'wb').write(''.join(map(chr,rdata)))
+        if not configuration['write'] and configuration['read']:
+            read_data = interface.read_memory_data(configuration['address'], configuration['length'])
+            open(data_file, 'wb').write(read_data)
 
-        if conf['go_addr'] != -1:
-            cmd.cmdGo(conf['go_addr'])
+        if configuration['go_address'] != -1:
+            interface.go(configuration['go_address'])
 
     finally:
-        cmd.releaseChip()
-
+        interface.release_chip()
