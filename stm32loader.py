@@ -380,9 +380,8 @@ if __name__ == "__main__":
         'go_address': -1,
     }
 
-# http://www.python.org/doc/2.5.2/lib/module-getopt.html
-
     try:
+        # parse command-line arguments using getopt
         opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
@@ -435,11 +434,6 @@ if __name__ == "__main__":
         debug(0, "Bootloader version %X" % boot_version)
         device_id = interface.get_id()
         debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
-#    interface.get_version()
-#    interface.get_id()
-#    interface.readout_unprotect()
-#    interface.write_unprotect()
-#    interface.write_protect([0, 1])
 
         binary_data = None
         data_file = args[0] if args else None
