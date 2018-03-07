@@ -231,20 +231,28 @@ class CommandInterface:
             raise CmdException("Erase memory (0x43) failed")
 
         debug(10, "*** Erase memory interface")
-        if sectors is None:
-            # Global erase and checksum byte
-            self.serial.write(b'\xff')
-            self.serial.write(b'\x00')
+
+        if sectors:
+            self._page_erase(sectors)
         else:
-            # Sectors erase
-            self.serial.write(bytes([(len(sectors) - 1) & 0xFF]))
-            crc = 0xFF
-            for c in sectors:
-                crc = crc ^ c
-                self.serial.write(bytes([c]))
-            self.serial.write(bytes([crc]))
-        self._wait_for_ack("0x43 erasing failed")
+            self._global_erase()
+        self._wait_for_ack("0x43 erase failed")
         debug(10, "    Erase memory done")
+
+    def _global_erase(self):
+        # global erase: n=255, see ST AN3155
+        self.serial.write(b'\xff')
+        self.serial.write(b'\x00')
+
+    def _page_erase(self, pages):
+        # page erase, see ST AN3155
+        nr_of_pages = (len(pages) - 1) & 0xFF
+        self.serial.write(bytes([nr_of_pages]))
+        crc = 0xFF
+        for page_number in pages:
+            self.serial.write(bytes([page_number]))
+            crc = crc ^ page_number
+        self.serial.write(bytes([crc]))
 
     def extended_erase_memory(self):
         if not self.command(self.Command.EXTENDED_ERASE):
