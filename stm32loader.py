@@ -360,15 +360,6 @@ def usage():
 
 if __name__ == "__main__":
     
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print("Using Psyco...")
-    except ImportError:
-        psyco = None
-        pass
-
     configuration = {
         'port': '/dev/tty.usbserial-ftCYPMYJ',
         'baud': 115200,
