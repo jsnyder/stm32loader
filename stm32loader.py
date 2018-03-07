@@ -338,7 +338,7 @@ class CommandInterface:
 
 
 def usage():
-    print("""Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
+    help_text = """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
@@ -353,8 +353,9 @@ def usage():
     -g address  Address to start running at (0x08000000, usually)
 
     ./stm32loader.py -e -w -v example/main.bin
-
-    """ % sys.argv[0])
+    """
+    help_text = help_text % sys.argv[0]
+    print(help_text)
 
 
 if __name__ == "__main__":
