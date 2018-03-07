@@ -3,6 +3,8 @@ STM32Loader
 
 Python script which will talk to the STM32 bootloader to upload and download firmware.
 
+Requires Python 3.
+
 Original Version by: Ivan A-R <ivan@tuxotronic.org>.
 
 
