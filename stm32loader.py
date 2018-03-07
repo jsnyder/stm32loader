@@ -307,7 +307,7 @@ class CommandInterface:
         # page erase, see ST AN3155
         nr_of_pages = (len(pages) - 1) & 0xFF
         self.serial.write(bytes([nr_of_pages]))
-        checksum = 0xFF
+        checksum = nr_of_pages
         for page_number in pages:
             self.serial.write(bytes([page_number]))
             checksum = checksum ^ page_number
