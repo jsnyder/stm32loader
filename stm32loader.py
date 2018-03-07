@@ -95,21 +95,19 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def _wait_for_ask(self, info=""):
-        # wait for ask
+    def _wait_for_ack(self, info=""):
         try:
-            ask = self.serial.read()[0]
+            ack = self.serial.read()[0]
         except TypeError:
             raise CmdException("Can't read port or timeout")
-        else:
-            if ask == self.Reply.ACK:
-                return 1
-            else:
-                if ask == self.Reply.NACK:
-                    raise CmdException("NACK "+info)
-                else:
-                    # Unknown response
-                    raise CmdException("Unknown response. "+info+": "+hex(ask))
+
+        if ack == self.Reply.NACK:
+            raise CmdException("NACK " + info)
+
+        if ack != self.Replay.ACK:
+            raise CmdException("Unknown response. " + info + ": " + hex(ack))
+
+        return 1
 
     def reset(self):
         self.serial.setDTR(0)
@@ -124,7 +122,7 @@ class CommandInterface:
 
         # Syncro
         self.serial.write(b'\x7F')
-        return self._wait_for_ask("Syncro")
+        return self._wait_for_ack("Syncro")
 
     def release_chip(self):
         self.serial.setRTS(1)
@@ -137,7 +135,7 @@ class CommandInterface:
         self.serial.write(command_byte)
         self.serial.write(control_byte)
 
-        return self._wait_for_ask(hex(command))
+        return self._wait_for_ack(hex(command))
 
     def get(self):
         if not self.generic(self.Command.GET):
@@ -150,7 +148,7 @@ class CommandInterface:
         if self.Reply.EXTENDED_ERASE in data:
             self.extended_erase = 1
         debug(10, "    Available commands: " + ", ".join(data))
-        self._wait_for_ask("0x00 end")
+        self._wait_for_ack("0x00 end")
         return version
 
     def get_version(self):
@@ -160,7 +158,7 @@ class CommandInterface:
         debug(10, "*** GetVersion interface")
         version = self.serial.read()[0]
         self.serial.read(2)
-        self._wait_for_ask("0x01 end")
+        self._wait_for_ack("0x01 end")
         debug(10, "    Bootloader version: " + hex(version))
         return version
 
@@ -171,7 +169,7 @@ class CommandInterface:
         debug(10, "*** GetID interface")
         length = self.serial.read()[0]
         id_data = self.serial.read(length + 1)
-        self._wait_for_ask("0x02 end")
+        self._wait_for_ack("0x02 end")
         _device_id = reduce(lambda x, y: x*0x100+y, id_data)
         return _device_id
 
@@ -191,11 +189,11 @@ class CommandInterface:
 
         debug(10, "*** ReadMemory interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x11 address failed")
+        self._wait_for_ack("0x11 address failed")
         n = (length - 1) & 0xFF
         crc = n ^ 0xFF
         self.serial.write(bytes([n, crc]))
-        self._wait_for_ask("0x11 length failed")
+        self._wait_for_ack("0x11 length failed")
         return self.serial.read(length)
 
     def go(self, address):
@@ -204,7 +202,7 @@ class CommandInterface:
 
         debug(10, "*** Go interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x21 go failed")
+        self._wait_for_ack("0x21 go failed")
 
     def write_memory(self, address, data):
         assert(len(data) <= 256)
@@ -213,7 +211,7 @@ class CommandInterface:
 
         debug(10, "*** Write memory interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x31 address failed")
+        self._wait_for_ack("0x31 address failed")
         length = (len(data)-1) & 0xFF
         debug(10, "    %s bytes to write" % [length + 1])
         self.serial.write(bytes([length]))
@@ -222,7 +220,7 @@ class CommandInterface:
             crc = crc ^ c
             self.serial.write(bytes([c]))
         self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x31 programming failed")
+        self._wait_for_ack("0x31 programming failed")
         debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
@@ -245,7 +243,7 @@ class CommandInterface:
                 crc = crc ^ c
                 self.serial.write(bytes([c]))
             self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x43 erasing failed")
+        self._wait_for_ack("0x43 erasing failed")
         debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
@@ -260,7 +258,7 @@ class CommandInterface:
         tmp = self.serial.timeout
         self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
-        self._wait_for_ask("0x44 erasing failed")
+        self._wait_for_ack("0x44 erasing failed")
         self.serial.timeout = tmp
         debug(10, "    Extended Erase memory done")
 
@@ -275,7 +273,7 @@ class CommandInterface:
             crc = crc ^ c
             self.serial.write(bytes([c]))
         self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x63 write protect failed")
+        self._wait_for_ack("0x63 write protect failed")
         debug(10, "    Write protect done")
 
     def write_unprotect(self):
@@ -283,8 +281,8 @@ class CommandInterface:
             raise CmdException("Write Unprotect (0x73) failed")
 
         debug(10, "*** Write Unprotect interface")
-        self._wait_for_ask("0x73 write unprotect failed")
-        self._wait_for_ask("0x73 write unprotect 2 failed")
+        self._wait_for_ack("0x73 write unprotect failed")
+        self._wait_for_ack("0x73 write unprotect 2 failed")
         debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
@@ -292,8 +290,8 @@ class CommandInterface:
             raise CmdException("Readout protect (0x82) failed")
 
         debug(10, "*** Readout protect interface")
-        self._wait_for_ask("0x82 readout protect failed")
-        self._wait_for_ask("0x82 readout protect 2 failed")
+        self._wait_for_ack("0x82 readout protect failed")
+        self._wait_for_ack("0x82 readout protect 2 failed")
         debug(10, "    Read protect done")
 
     def readout_unprotect(self):
@@ -301,8 +299,8 @@ class CommandInterface:
             raise CmdException("Readout unprotect (0x92) failed")
 
         debug(10, "*** Readout Unprotect interface")
-        self._wait_for_ask("0x92 readout unprotect failed")
-        self._wait_for_ask("0x92 readout unprotect 2 failed")
+        self._wait_for_ack("0x92 readout unprotect failed")
+        self._wait_for_ack("0x92 readout unprotect 2 failed")
         debug(10, "    Read Unprotect done")
 
 
