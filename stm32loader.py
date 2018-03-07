@@ -89,6 +89,8 @@ class CommandInterface:
 
     def __init__(self):
         self.serial = None
+        self._reset_active_high = False
+        self._boot0_active_high = False
 
     def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
         self.serial = serial.Serial(
@@ -319,13 +321,17 @@ class CommandInterface:
         self.serial.write(bytearray([checksum]))
 
     def _enable_reset(self, enable=True):
-        # active low
+        # active low unless otherwise specified
         level = 0 if enable else 1
+        if self._reset_active_high:
+            level = 1 - level
         self.serial.setDTR(level)
 
     def _enable_boot0(self, enable=True):
-        # active low
+        # active low unless otherwise specified
         level = 0 if enable else 1
+        if self._boot0_active_high:
+            level = 1 - level
         self.serial.setRTS(level)
 
     def _wait_for_ack(self, info=""):
