@@ -95,20 +95,6 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def _wait_for_ack(self, info=""):
-        try:
-            ack = self.serial.read()[0]
-        except TypeError:
-            raise CmdException("Can't read port or timeout")
-
-        if ack == self.Reply.NACK:
-            raise CmdException("NACK " + info)
-
-        if ack != self.Replay.ACK:
-            raise CmdException("Unknown response. " + info + ": " + hex(ack))
-
-        return 1
-
     def reset(self):
         self.serial.setDTR(0)
         time.sleep(0.1)
@@ -173,15 +159,6 @@ class CommandInterface:
         _device_id = reduce(lambda x, y: x*0x100+y, id_data)
         return _device_id
 
-    @staticmethod
-    def _encode_address(address):
-        byte3 = (address >> 0) & 0xFF
-        byte2 = (address >> 8) & 0xFF
-        byte1 = (address >> 16) & 0xFF
-        byte0 = (address >> 24) & 0xFF
-        crc = byte0 ^ byte1 ^ byte2 ^ byte3
-        return bytes([byte0, byte1, byte2, byte3, crc])
-
     def read_memory(self, address, length):
         assert(length <= 256)
         if not self.command(self.Command.READ_MEMORY):
@@ -238,21 +215,6 @@ class CommandInterface:
             self._global_erase()
         self._wait_for_ack("0x43 erase failed")
         debug(10, "    Erase memory done")
-
-    def _global_erase(self):
-        # global erase: n=255, see ST AN3155
-        self.serial.write(b'\xff')
-        self.serial.write(b'\x00')
-
-    def _page_erase(self, pages):
-        # page erase, see ST AN3155
-        nr_of_pages = (len(pages) - 1) & 0xFF
-        self.serial.write(bytes([nr_of_pages]))
-        crc = 0xFF
-        for page_number in pages:
-            self.serial.write(bytes([page_number]))
-            crc = crc ^ page_number
-        self.serial.write(bytes([crc]))
 
     def extended_erase_memory(self):
         if not self.command(self.Command.EXTENDED_ERASE):
@@ -311,9 +273,6 @@ class CommandInterface:
         self._wait_for_ack("0x92 readout unprotect 2 failed")
         debug(10, "    Read Unprotect done")
 
-
-# Complex commands section
-
     def read_memory_data(self, address, length):
         data = bytearray()
         while length > 256:
@@ -338,6 +297,44 @@ class CommandInterface:
         else:
             debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
         self.write_memory(address, data[offs:offs + length] + (b'\xff' * (256 - length)))
+
+    def _global_erase(self):
+        # global erase: n=255, see ST AN3155
+        self.serial.write(b'\xff')
+        self.serial.write(b'\x00')
+
+    def _page_erase(self, pages):
+        # page erase, see ST AN3155
+        nr_of_pages = (len(pages) - 1) & 0xFF
+        self.serial.write(bytes([nr_of_pages]))
+        crc = 0xFF
+        for page_number in pages:
+            self.serial.write(bytes([page_number]))
+            checksum = checksum ^ page_number
+        self.serial.write(bytes([checksum]))
+
+    def _wait_for_ack(self, info=""):
+        try:
+            ack = self.serial.read()[0]
+        except TypeError:
+            raise CmdException("Can't read port or timeout")
+
+        if ack == self.Reply.NACK:
+            raise CmdException("NACK " + info)
+
+        if ack != self.Reply.ACK:
+            raise CmdException("Unknown response. " + info + ": " + hex(ack))
+
+        return 1
+
+    @staticmethod
+    def _encode_address(address):
+        byte3 = (address >> 0) & 0xFF
+        byte2 = (address >> 8) & 0xFF
+        byte1 = (address >> 16) & 0xFF
+        byte0 = (address >> 24) & 0xFF
+        crc = byte0 ^ byte1 ^ byte2 ^ byte3
+        return bytes([byte0, byte1, byte2, byte3, crc])
 
 
 def usage():
