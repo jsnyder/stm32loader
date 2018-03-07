@@ -28,11 +28,12 @@ import getopt
 import serial
 import time
 
+
 # Verbose level
 QUIET = 20
 
-# these come from AN2606
-chip_ids = {
+CHIP_IDS = {
+    # see ST AN2606
     0x412: "STM32 Low-density",
     0x410: "STM32 Medium-density",
     0x414: "STM32 High-density",
@@ -56,6 +57,27 @@ class CmdException(Exception):
 
 class CommandInterface:
 
+    class Command:
+        # See ST AN3155
+        GET = 0x00
+        GET_VERSION = 0x01
+        GET_ID = 0x02
+        READ_MEMORY = 0x11
+        GO = 0x21
+        WRITE_MEMORY = 0x31
+        ERASE = 0x43
+        EXTENDED_ERASE = 0x44
+        WRITE_PROTECT = 0x63
+        WRITE_UNPROTECT = 0x73
+        READOUT_PROTECT = 0x82
+        READOUT_UNPROTECT = 0x92
+
+    class Reply:
+        # See ST AN3155
+        ACK = 0x79
+        NACK = 0x1F
+        EXTENDED_ERASE = 0x44
+
     extended_erase = 0
 
     def __init__(self):
@@ -73,24 +95,6 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def _wait_for_ask(self, info=""):
-        # wait for ask
-        try:
-            ask = self.serial.read()[0]
-        except TypeError:
-            raise CmdException("Can't read port or timeout")
-        else:
-            if ask == 0x79:
-                # ACK
-                return 1
-            else:
-                if ask == 0x1F:
-                    # NACK
-                    raise CmdException("NACK "+info)
-                else:
-                    # Unknown response
-                    raise CmdException("Unknown response. "+info+": "+hex(ask))
-
     def reset(self):
         self.serial.setDTR(0)
         time.sleep(0.1)
@@ -104,132 +108,116 @@ class CommandInterface:
 
         # Syncro
         self.serial.write(b'\x7F')
-        return self._wait_for_ask("Syncro")
+        return self._wait_for_ack("Syncro")
 
     def release_chip(self):
         self.serial.setRTS(1)
         self.reset()
 
-    def generic(self, command):
+    def command(self, command):
         command_byte = bytes([command])
         control_byte = bytes([command ^ 0xFF])
 
         self.serial.write(command_byte)
         self.serial.write(control_byte)
 
-        return self._wait_for_ask(hex(command))
+        return self._wait_for_ack(hex(command))
 
     def get(self):
-        if not self.generic(0x00):
+        if not self.command(self.Command.GET):
             raise CmdException("Get (0x00) failed")
         debug(10, "*** Get interface")
         length = self.serial.read()[0]
         version = self.serial.read()[0]
         debug(10, "    Bootloader version: " + hex(version))
-        data = [hex(c) for c in self.serial.read(length)]
-        if '0x44' in data:
+        data = self.serial.read(length)
+        if self.Reply.EXTENDED_ERASE in data:
             self.extended_erase = 1
         debug(10, "    Available commands: " + ", ".join(data))
-        self._wait_for_ask("0x00 end")
+        self._wait_for_ack("0x00 end")
         return version
 
     def get_version(self):
-        if not self.generic(0x01):
+        if not self.command(self.Command.GET_VERSION):
             raise CmdException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
         version = self.serial.read()[0]
         self.serial.read(2)
-        self._wait_for_ask("0x01 end")
+        self._wait_for_ack("0x01 end")
         debug(10, "    Bootloader version: " + hex(version))
         return version
 
     def get_id(self):
-        if not self.generic(0x02):
+        if not self.command(self.Command.GET_ID):
             raise CmdException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
         length = self.serial.read()[0]
         id_data = self.serial.read(length + 1)
-        self._wait_for_ask("0x02 end")
+        self._wait_for_ack("0x02 end")
         _device_id = reduce(lambda x, y: x*0x100+y, id_data)
         return _device_id
 
-    @staticmethod
-    def _encode_address(address):
-        byte3 = (address >> 0) & 0xFF
-        byte2 = (address >> 8) & 0xFF
-        byte1 = (address >> 16) & 0xFF
-        byte0 = (address >> 24) & 0xFF
-        crc = byte0 ^ byte1 ^ byte2 ^ byte3
-        return bytes([byte0, byte1, byte2, byte3, crc])
-
     def read_memory(self, address, length):
         assert(length <= 256)
-        if not self.generic(0x11):
+        if not self.command(self.Command.READ_MEMORY):
             raise CmdException("ReadMemory (0x11) failed")
 
         debug(10, "*** ReadMemory interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x11 address failed")
+        self._wait_for_ack("0x11 address failed")
         n = (length - 1) & 0xFF
-        crc = n ^ 0xFF
-        self.serial.write(bytes([n, crc]))
-        self._wait_for_ask("0x11 length failed")
+        checksum = n ^ 0xFF
+        self.serial.write(bytes([n, checksum]))
+        self._wait_for_ack("0x11 length failed")
         return self.serial.read(length)
 
     def go(self, address):
-        if not self.generic(0x21):
+        if not self.command(self.Command.GO):
             raise CmdException("Go (0x21) failed")
 
         debug(10, "*** Go interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x21 go failed")
+        self._wait_for_ack("0x21 go failed")
 
     def write_memory(self, address, data):
         assert(len(data) <= 256)
-        if not self.generic(0x31):
+        if not self.command(self.Command.WRITE_MEMORY):
             raise CmdException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory interface")
         self.serial.write(self._encode_address(address))
-        self._wait_for_ask("0x31 address failed")
+        self._wait_for_ack("0x31 address failed")
         length = (len(data)-1) & 0xFF
         debug(10, "    %s bytes to write" % [length + 1])
         self.serial.write(bytes([length]))
-        crc = 0xFF
+        checksum = 0xFF
         for c in data:
-            crc = crc ^ c
+            checksum = checksum ^ c
             self.serial.write(bytes([c]))
-        self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x31 programming failed")
+        self.serial.write(bytes([checksum]))
+        self._wait_for_ack("0x31 programming failed")
         debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
             return interface.extended_erase_memory()
 
-        if not self.generic(0x43):
+        if not self.command(self.Command.ERASE):
             raise CmdException("Erase memory (0x43) failed")
 
         debug(10, "*** Erase memory interface")
-        if sectors is None:
-            # Global erase and checksum byte
-            self.serial.write(b'\xff')
-            self.serial.write(b'\x00')
+
+        if sectors:
+            self._page_erase(sectors)
         else:
-            # Sectors erase
-            self.serial.write(bytes([(len(sectors) - 1) & 0xFF]))
-            crc = 0xFF
-            for c in sectors:
-                crc = crc ^ c
-                self.serial.write(bytes([c]))
-            self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x43 erasing failed")
+            self._global_erase()
+        self._wait_for_ack("0x43 erase failed")
         debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
-        if not self.generic(0x44):
+        if not self.command(self.Command.EXTENDED_ERASE):
             raise CmdException("Extended Erase memory (0x44) failed")
 
         debug(10, "*** Extended Erase memory interface")
@@ -240,53 +228,50 @@ class CommandInterface:
         tmp = self.serial.timeout
         self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
-        self._wait_for_ask("0x44 erasing failed")
+        self._wait_for_ack("0x44 erasing failed")
         self.serial.timeout = tmp
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, sectors):
-        if not self.generic(0x63):
+        if not self.command(self.Command.WRITE_PROTECT):
             raise CmdException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
         self.serial.write(bytes([((len(sectors) - 1) & 0xFF)]))
-        crc = 0xFF
+        checksum = 0xFF
         for c in sectors:
-            crc = crc ^ c
+            checksum = checksum ^ c
             self.serial.write(bytes([c]))
-        self.serial.write(bytes([crc]))
-        self._wait_for_ask("0x63 write protect failed")
+        self.serial.write(bytes([checksum]))
+        self._wait_for_ack("0x63 write protect failed")
         debug(10, "    Write protect done")
 
     def write_unprotect(self):
-        if not self.generic(0x73):
+        if not self.command(self.Command.WRITE_UNPROTECT):
             raise CmdException("Write Unprotect (0x73) failed")
 
         debug(10, "*** Write Unprotect interface")
-        self._wait_for_ask("0x73 write unprotect failed")
-        self._wait_for_ask("0x73 write unprotect 2 failed")
+        self._wait_for_ack("0x73 write unprotect failed")
+        self._wait_for_ack("0x73 write unprotect 2 failed")
         debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
-        if not self.generic(0x82):
+        if not self.command(self.Command.READOUT_PROTECT):
             raise CmdException("Readout protect (0x82) failed")
 
         debug(10, "*** Readout protect interface")
-        self._wait_for_ask("0x82 readout protect failed")
-        self._wait_for_ask("0x82 readout protect 2 failed")
+        self._wait_for_ack("0x82 readout protect failed")
+        self._wait_for_ack("0x82 readout protect 2 failed")
         debug(10, "    Read protect done")
 
     def readout_unprotect(self):
-        if not self.generic(0x92):
+        if not self.command(self.Command.READOUT_UNPROTECT):
             raise CmdException("Readout unprotect (0x92) failed")
 
         debug(10, "*** Readout Unprotect interface")
-        self._wait_for_ask("0x92 readout unprotect failed")
-        self._wait_for_ask("0x92 readout unprotect 2 failed")
+        self._wait_for_ack("0x92 readout unprotect failed")
+        self._wait_for_ack("0x92 readout unprotect 2 failed")
         debug(10, "    Read Unprotect done")
-
-
-# Complex commands section
 
     def read_memory_data(self, address, length):
         data = bytearray()
@@ -312,6 +297,44 @@ class CommandInterface:
         else:
             debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
         self.write_memory(address, data[offs:offs + length] + (b'\xff' * (256 - length)))
+
+    def _global_erase(self):
+        # global erase: n=255, see ST AN3155
+        self.serial.write(b'\xff')
+        self.serial.write(b'\x00')
+
+    def _page_erase(self, pages):
+        # page erase, see ST AN3155
+        nr_of_pages = (len(pages) - 1) & 0xFF
+        self.serial.write(bytes([nr_of_pages]))
+        checksum = 0xFF
+        for page_number in pages:
+            self.serial.write(bytes([page_number]))
+            checksum = checksum ^ page_number
+        self.serial.write(bytes([checksum]))
+
+    def _wait_for_ack(self, info=""):
+        try:
+            ack = self.serial.read()[0]
+        except TypeError:
+            raise CmdException("Can't read port or timeout")
+
+        if ack == self.Reply.NACK:
+            raise CmdException("NACK " + info)
+
+        if ack != self.Reply.ACK:
+            raise CmdException("Unknown response. " + info + ": " + hex(ack))
+
+        return 1
+
+    @staticmethod
+    def _encode_address(address):
+        byte3 = (address >> 0) & 0xFF
+        byte2 = (address >> 8) & 0xFF
+        byte1 = (address >> 16) & 0xFF
+        byte0 = (address >> 24) & 0xFF
+        checksum = byte0 ^ byte1 ^ byte2 ^ byte3
+        return bytes([byte0, byte1, byte2, byte3, checksum])
 
 
 def usage():
@@ -410,7 +433,7 @@ if __name__ == "__main__":
         boot_version = interface.get()
         debug(0, "Bootloader version %X" % boot_version)
         device_id = interface.get_id()
-        debug(0, "Chip id: 0x%x (%s)" % (device_id, chip_ids.get(device_id, "Unknown")))
+        debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 #    interface.get_version()
 #    interface.get_id()
 #    interface.readout_unprotect()
