@@ -99,14 +99,13 @@ class CommandInterface:
         )
 
     def reset(self):
-        self.serial.setDTR(0)
+        self._enable_reset(True)
         time.sleep(0.1)
-        self.serial.setDTR(1)
+        self._enable_reset(False)
         time.sleep(0.5)
 
     def init_chip(self):
-        # Set boot
-        self.serial.setRTS(0)
+        self._enable_boot0(True)
         self.reset()
 
         # Syncro
@@ -114,7 +113,7 @@ class CommandInterface:
         return self._wait_for_ack("Syncro")
 
     def release_chip(self):
-        self.serial.setRTS(1)
+        self._enable_boot0(False)
         self.reset()
 
     def command(self, command):
@@ -316,6 +315,16 @@ class CommandInterface:
             self.serial.write(bytearray([page_number]))
             checksum = checksum ^ page_number
         self.serial.write(bytearray([checksum]))
+
+    def _enable_reset(self, enable=True):
+        # active low
+        level = 0 if enable else 1
+        self.serial.setDTR(level)
+
+    def _enable_boot0(self, enable=True):
+        # active low
+        level = 0 if enable else 1
+        self.serial.setRTS(level)
 
     def _wait_for_ack(self, info=""):
         try:
