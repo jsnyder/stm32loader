@@ -87,11 +87,11 @@ class CommandInterface:
 
     extended_erase = 0
 
-    def __init__(self):
+    def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
         self.serial = None
-        self._swap_RTS_DTR = False
-        self._reset_active_high = False
-        self._boot0_active_high = False
+        self._swap_RTS_DTR = swap_rts_dtr
+        self._reset_active_high = reset_active_high
+        self._boot0_active_high = boot0_active_high
 
     def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
         self.serial = serial.Serial(
@@ -368,7 +368,7 @@ class CommandInterface:
 
 
 def usage():
-    help_text = """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
+    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
@@ -376,6 +376,9 @@ def usage():
     -w          Write
     -v          Verify (recommended)
     -r          Read
+    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0.
+    -R          Make reset active high.
+    -B          Make boot0 active high.
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
@@ -399,11 +402,14 @@ if __name__ == "__main__":
         'verify': 0,
         'read': 0,
         'go_address': -1,
+        'swap_rts_dtr': False,
+        'reset_active_high': False,
+        'boot0_active_high': False,
     }
 
     try:
         # parse command-line arguments using getopt
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBp:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
         # this print something like "option -a not recognized"
@@ -431,6 +437,12 @@ if __name__ == "__main__":
             configuration['read'] = 1
         elif o == '-p':
             configuration['port'] = a
+        elif o == '-s':
+            configuration['swap_rts_dtr'] = True
+        elif o == '-R':
+            configuration['reset_active_high'] = True
+        elif o == '-B':
+            configuration['boot0_active_high'] = True
         elif o == '-b':
             configuration['baud'] = eval(a)
         elif o == '-a':
@@ -442,7 +454,11 @@ if __name__ == "__main__":
         else:
             assert False, "unhandled option"
 
-    interface = CommandInterface()
+    interface = CommandInterface(
+        swap_rts_dtr=configuration['swap_rts_dtr'],
+        reset_active_high=configuration['reset_active_high'],
+        boot0_active_high=configuration['boot0_active_high'],
+    )
     interface.open(configuration['port'], configuration['baud'])
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:

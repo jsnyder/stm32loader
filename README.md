@@ -20,6 +20,9 @@ Usage
     -w          Write
     -v          Verify (recommended)
     -r          Read
+    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0.
+    -R          Make reset active high.
+    -B          Make boot0 active high.
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
