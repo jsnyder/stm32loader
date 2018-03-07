@@ -21,7 +21,8 @@ Usage
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
-     -a addr     Target address
+    -a address  Target address
+    -g address  Address to start running at (0x08000000, usually)
 ```
 
 
