@@ -74,11 +74,15 @@ class CommandInterface:
         WRITE_UNPROTECT = 0x73
         READOUT_PROTECT = 0x82
         READOUT_UNPROTECT = 0x92
+        # not really listed under commands, but still...
+        # 'wake the bootloader' == 'activate USART' == 'synchronize'
+        SYNCHRONIZE = 0x7F
 
     class Reply:
         # See ST AN3155
         ACK = 0x79
         NACK = 0x1F
+        # not really an ack/nack reply, but still...
         EXTENDED_ERASE = 0x44
 
     extended_erase = 0
@@ -107,9 +111,7 @@ class CommandInterface:
     def init_chip(self):
         self._enable_boot0(True)
         self.reset()
-
-        # Syncro
-        self.serial.write(b'\x7F')
+        self.serial.write(bytearray([self.Command.SYNCHRONIZE]))
         return self._wait_for_ack("Syncro")
 
     def release_chip(self):
