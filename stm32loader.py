@@ -168,8 +168,8 @@ class CommandInterface:
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x11 address failed")
         n = (length - 1) & 0xFF
-        crc = n ^ 0xFF
-        self.serial.write(bytes([n, crc]))
+        checksum = n ^ 0xFF
+        self.serial.write(bytes([n, checksum]))
         self._wait_for_ack("0x11 length failed")
         return self.serial.read(length)
 
@@ -192,11 +192,11 @@ class CommandInterface:
         length = (len(data)-1) & 0xFF
         debug(10, "    %s bytes to write" % [length + 1])
         self.serial.write(bytes([length]))
-        crc = 0xFF
+        checksum = 0xFF
         for c in data:
-            crc = crc ^ c
+            checksum = checksum ^ c
             self.serial.write(bytes([c]))
-        self.serial.write(bytes([crc]))
+        self.serial.write(bytes([checksum]))
         self._wait_for_ack("0x31 programming failed")
         debug(10, "    Write memory done")
 
@@ -238,11 +238,11 @@ class CommandInterface:
 
         debug(10, "*** Write protect interface")
         self.serial.write(bytes([((len(sectors) - 1) & 0xFF)]))
-        crc = 0xFF
+        checksum = 0xFF
         for c in sectors:
-            crc = crc ^ c
+            checksum = checksum ^ c
             self.serial.write(bytes([c]))
-        self.serial.write(bytes([crc]))
+        self.serial.write(bytes([checksum]))
         self._wait_for_ack("0x63 write protect failed")
         debug(10, "    Write protect done")
 
@@ -307,7 +307,7 @@ class CommandInterface:
         # page erase, see ST AN3155
         nr_of_pages = (len(pages) - 1) & 0xFF
         self.serial.write(bytes([nr_of_pages]))
-        crc = 0xFF
+        checksum = 0xFF
         for page_number in pages:
             self.serial.write(bytes([page_number]))
             checksum = checksum ^ page_number
@@ -333,8 +333,8 @@ class CommandInterface:
         byte2 = (address >> 8) & 0xFF
         byte1 = (address >> 16) & 0xFF
         byte0 = (address >> 24) & 0xFF
-        crc = byte0 ^ byte1 ^ byte2 ^ byte3
-        return bytes([byte0, byte1, byte2, byte3, crc])
+        checksum = byte0 ^ byte1 ^ byte2 ^ byte3
+        return bytes([byte0, byte1, byte2, byte3, checksum])
 
 
 def usage():
