@@ -28,11 +28,12 @@ import getopt
 import serial
 import time
 
+
 # Verbose level
 QUIET = 20
 
-# these come from AN2606
-chip_ids = {
+CHIP_IDS = {
+    # see ST AN2606
     0x412: "STM32 Low-density",
     0x410: "STM32 Medium-density",
     0x414: "STM32 High-density",
@@ -55,6 +56,27 @@ class CmdException(Exception):
 
 
 class CommandInterface:
+
+    class Command:
+        # See ST AN3155
+        GET = 0x00
+        GET_VERSION = 0x01
+        GET_ID = 0x02
+        READ_MEMORY = 0x11
+        GO = 0x21
+        WRITE_MEMORY = 0x31
+        ERASE = 0x43
+        EXTENDED_ERASE = 0x44
+        WRITE_PROTECT = 0x63
+        WRITE_UNPROTECT = 0x73
+        READOUT_PROTECT = 0x82
+        READOUT_UNPROTECT = 0x92
+
+    class Reply:
+        # See ST AN3155
+        ACK = 0x79
+        NACK = 0x1F
+        EXTENDED_ERASE = 0x44
 
     extended_erase = 0
 
@@ -80,12 +102,10 @@ class CommandInterface:
         except TypeError:
             raise CmdException("Can't read port or timeout")
         else:
-            if ask == 0x79:
-                # ACK
+            if ask == self.Reply.ACK:
                 return 1
             else:
-                if ask == 0x1F:
-                    # NACK
+                if ask == self.Reply.NACK:
                     raise CmdException("NACK "+info)
                 else:
                     # Unknown response
@@ -120,21 +140,21 @@ class CommandInterface:
         return self._wait_for_ask(hex(command))
 
     def get(self):
-        if not self.generic(0x00):
+        if not self.generic(self.Command.GET):
             raise CmdException("Get (0x00) failed")
         debug(10, "*** Get interface")
         length = self.serial.read()[0]
         version = self.serial.read()[0]
         debug(10, "    Bootloader version: " + hex(version))
-        data = [hex(c) for c in self.serial.read(length)]
-        if '0x44' in data:
+        data = self.serial.read(length)
+        if self.Reply.EXTENDED_ERASE in data:
             self.extended_erase = 1
         debug(10, "    Available commands: " + ", ".join(data))
         self._wait_for_ask("0x00 end")
         return version
 
     def get_version(self):
-        if not self.generic(0x01):
+        if not self.generic(self.Command.GET_VERSION):
             raise CmdException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
@@ -145,7 +165,7 @@ class CommandInterface:
         return version
 
     def get_id(self):
-        if not self.generic(0x02):
+        if not self.generic(self.Command.GET_ID):
             raise CmdException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
@@ -166,7 +186,7 @@ class CommandInterface:
 
     def read_memory(self, address, length):
         assert(length <= 256)
-        if not self.generic(0x11):
+        if not self.generic(self.Command.READ_MEMORY):
             raise CmdException("ReadMemory (0x11) failed")
 
         debug(10, "*** ReadMemory interface")
@@ -179,7 +199,7 @@ class CommandInterface:
         return self.serial.read(length)
 
     def go(self, address):
-        if not self.generic(0x21):
+        if not self.generic(self.Command.GO):
             raise CmdException("Go (0x21) failed")
 
         debug(10, "*** Go interface")
@@ -188,7 +208,7 @@ class CommandInterface:
 
     def write_memory(self, address, data):
         assert(len(data) <= 256)
-        if not self.generic(0x31):
+        if not self.generic(self.Command.WRITE_MEMORY):
             raise CmdException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory interface")
@@ -209,7 +229,7 @@ class CommandInterface:
         if self.extended_erase:
             return interface.extended_erase_memory()
 
-        if not self.generic(0x43):
+        if not self.generic(self.Command.ERASE):
             raise CmdException("Erase memory (0x43) failed")
 
         debug(10, "*** Erase memory interface")
@@ -229,7 +249,7 @@ class CommandInterface:
         debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
-        if not self.generic(0x44):
+        if not self.generic(self.Command.EXTENDED_ERASE):
             raise CmdException("Extended Erase memory (0x44) failed")
 
         debug(10, "*** Extended Erase memory interface")
@@ -245,7 +265,7 @@ class CommandInterface:
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, sectors):
-        if not self.generic(0x63):
+        if not self.generic(self.Command.WRITE_PROTECT):
             raise CmdException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
@@ -259,7 +279,7 @@ class CommandInterface:
         debug(10, "    Write protect done")
 
     def write_unprotect(self):
-        if not self.generic(0x73):
+        if not self.generic(self.Command.WRITE_UNPROTECT):
             raise CmdException("Write Unprotect (0x73) failed")
 
         debug(10, "*** Write Unprotect interface")
@@ -268,7 +288,7 @@ class CommandInterface:
         debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
-        if not self.generic(0x82):
+        if not self.generic(self.Command.READOUT_PROTECT):
             raise CmdException("Readout protect (0x82) failed")
 
         debug(10, "*** Readout protect interface")
@@ -277,7 +297,7 @@ class CommandInterface:
         debug(10, "    Read protect done")
 
     def readout_unprotect(self):
-        if not self.generic(0x92):
+        if not self.generic(self.Command.READOUT_UNPROTECT):
             raise CmdException("Readout unprotect (0x92) failed")
 
         debug(10, "*** Readout Unprotect interface")
@@ -410,7 +430,7 @@ if __name__ == "__main__":
         boot_version = interface.get()
         debug(0, "Bootloader version %X" % boot_version)
         device_id = interface.get_id()
-        debug(0, "Chip id: 0x%x (%s)" % (device_id, chip_ids.get(device_id, "Unknown")))
+        debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 #    interface.get_version()
 #    interface.get_id()
 #    interface.readout_unprotect()
