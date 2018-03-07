@@ -89,6 +89,7 @@ class CommandInterface:
 
     def __init__(self):
         self.serial = None
+        self._swap_RTS_DTR = False
         self._reset_active_high = False
         self._boot0_active_high = False
 
@@ -325,14 +326,22 @@ class CommandInterface:
         level = 0 if enable else 1
         if self._reset_active_high:
             level = 1 - level
-        self.serial.setDTR(level)
+
+        if self._swap_RTS_DTR:
+            self.serial.setRTS(level)
+        else:
+            self.serial.setDTR(level)
 
     def _enable_boot0(self, enable=True):
         # active low unless otherwise specified
         level = 0 if enable else 1
         if self._boot0_active_high:
             level = 1 - level
-        self.serial.setRTS(level)
+
+        if self._swap_RTS_DTR:
+            self.serial.setDTR(level)
+        else:
+            self.serial.setRTS(level)
 
     def _wait_for_ack(self, info=""):
         try:
