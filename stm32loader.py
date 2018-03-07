@@ -4,7 +4,7 @@
 # vim: sw=4:ts=4:si:et:enc=utf-8
 
 # Author: Ivan A-R <ivan@tuxotronic.org>
-# Project page: http://tuxotronic.org/wiki/projects/stm32loader
+# GitHub repository: https://github.com/jsnyder/stm32loader
 #
 # This file is part of stm32loader.
 #
