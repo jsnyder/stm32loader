@@ -128,7 +128,7 @@ class CommandInterface:
         self.serial.setRTS(1)
         self.reset()
 
-    def generic(self, command):
+    def command(self, command):
         command_byte = bytes([command])
         control_byte = bytes([command ^ 0xFF])
 
@@ -138,7 +138,7 @@ class CommandInterface:
         return self._wait_for_ack(hex(command))
 
     def get(self):
-        if not self.generic(self.Command.GET):
+        if not self.command(self.Command.GET):
             raise CmdException("Get (0x00) failed")
         debug(10, "*** Get interface")
         length = self.serial.read()[0]
@@ -152,7 +152,7 @@ class CommandInterface:
         return version
 
     def get_version(self):
-        if not self.generic(self.Command.GET_VERSION):
+        if not self.command(self.Command.GET_VERSION):
             raise CmdException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
@@ -163,7 +163,7 @@ class CommandInterface:
         return version
 
     def get_id(self):
-        if not self.generic(self.Command.GET_ID):
+        if not self.command(self.Command.GET_ID):
             raise CmdException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
@@ -184,7 +184,7 @@ class CommandInterface:
 
     def read_memory(self, address, length):
         assert(length <= 256)
-        if not self.generic(self.Command.READ_MEMORY):
+        if not self.command(self.Command.READ_MEMORY):
             raise CmdException("ReadMemory (0x11) failed")
 
         debug(10, "*** ReadMemory interface")
@@ -197,7 +197,7 @@ class CommandInterface:
         return self.serial.read(length)
 
     def go(self, address):
-        if not self.generic(self.Command.GO):
+        if not self.command(self.Command.GO):
             raise CmdException("Go (0x21) failed")
 
         debug(10, "*** Go interface")
@@ -206,7 +206,7 @@ class CommandInterface:
 
     def write_memory(self, address, data):
         assert(len(data) <= 256)
-        if not self.generic(self.Command.WRITE_MEMORY):
+        if not self.command(self.Command.WRITE_MEMORY):
             raise CmdException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory interface")
@@ -227,7 +227,7 @@ class CommandInterface:
         if self.extended_erase:
             return interface.extended_erase_memory()
 
-        if not self.generic(self.Command.ERASE):
+        if not self.command(self.Command.ERASE):
             raise CmdException("Erase memory (0x43) failed")
 
         debug(10, "*** Erase memory interface")
@@ -247,7 +247,7 @@ class CommandInterface:
         debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
-        if not self.generic(self.Command.EXTENDED_ERASE):
+        if not self.command(self.Command.EXTENDED_ERASE):
             raise CmdException("Extended Erase memory (0x44) failed")
 
         debug(10, "*** Extended Erase memory interface")
@@ -263,7 +263,7 @@ class CommandInterface:
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, sectors):
-        if not self.generic(self.Command.WRITE_PROTECT):
+        if not self.command(self.Command.WRITE_PROTECT):
             raise CmdException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
@@ -277,7 +277,7 @@ class CommandInterface:
         debug(10, "    Write protect done")
 
     def write_unprotect(self):
-        if not self.generic(self.Command.WRITE_UNPROTECT):
+        if not self.command(self.Command.WRITE_UNPROTECT):
             raise CmdException("Write Unprotect (0x73) failed")
 
         debug(10, "*** Write Unprotect interface")
@@ -286,7 +286,7 @@ class CommandInterface:
         debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
-        if not self.generic(self.Command.READOUT_PROTECT):
+        if not self.command(self.Command.READOUT_PROTECT):
             raise CmdException("Readout protect (0x82) failed")
 
         debug(10, "*** Readout protect interface")
@@ -295,7 +295,7 @@ class CommandInterface:
         debug(10, "    Read protect done")
 
     def readout_unprotect(self):
-        if not self.generic(self.Command.READOUT_UNPROTECT):
+        if not self.command(self.Command.READOUT_UNPROTECT):
             raise CmdException("Readout unprotect (0x92) failed")
 
         debug(10, "*** Readout Unprotect interface")
