@@ -452,7 +452,7 @@ if __name__ == "__main__":
         elif o == '-l':
             configuration['length'] = eval(a)
         else:
-            assert False, "unhandled option"
+            assert False, "unhandled option %s" % o
 
     interface = CommandInterface(
         swap_rts_dtr=configuration['swap_rts_dtr'],
