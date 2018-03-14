@@ -105,13 +105,13 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def init_chip(self):
+    def reset_from_system_memory(self):
         self._enable_boot0(True)
         self._reset()
         self.serial.write(bytearray([self.Command.SYNCHRONIZE]))
         return self._wait_for_ack("Syncro")
 
-    def release_chip(self):
+    def reset_from_flash(self):
         self._enable_boot0(False)
         self._reset()
 
@@ -463,7 +463,7 @@ if __name__ == "__main__":
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
         try:
-            interface.init_chip()
+            interface.reset_from_system_memory()
         except Exception:
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
 
@@ -505,4 +505,4 @@ if __name__ == "__main__":
             interface.go(configuration['go_address'])
 
     finally:
-        interface.release_chip()
+        interface.reset_from_flash()
