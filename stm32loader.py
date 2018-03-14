@@ -105,21 +105,15 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def reset(self):
-        self._enable_reset(True)
-        time.sleep(0.1)
-        self._enable_reset(False)
-        time.sleep(0.5)
-
     def init_chip(self):
         self._enable_boot0(True)
-        self.reset()
+        self._reset()
         self.serial.write(bytearray([self.Command.SYNCHRONIZE]))
         return self._wait_for_ack("Syncro")
 
     def release_chip(self):
         self._enable_boot0(False)
-        self.reset()
+        self._reset()
 
     def command(self, command):
         command_byte = bytearray([command])
@@ -320,6 +314,12 @@ class CommandInterface:
             self.serial.write(bytearray([page_number]))
             checksum = checksum ^ page_number
         self.serial.write(bytearray([checksum]))
+
+    def _reset(self):
+        self._enable_reset(True)
+        time.sleep(0.1)
+        self._enable_reset(False)
+        time.sleep(0.5)
 
     def _enable_reset(self, enable=True):
         # active low unless otherwise specified
