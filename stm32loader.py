@@ -82,8 +82,6 @@ class CommandInterface:
         # See ST AN3155
         ACK = 0x79
         NACK = 0x1F
-        # not really an ack/nack reply, but still...
-        EXTENDED_ERASE = 0x44
 
     extended_erase = 0
 
@@ -132,7 +130,7 @@ class CommandInterface:
         version = bytearray(self.serial.read())[0]
         debug(10, "    Bootloader version: " + hex(version))
         data = bytearray(self.serial.read(length))
-        if self.Reply.EXTENDED_ERASE in data:
+        if self.Command.EXTENDED_ERASE in data:
             self.extended_erase = 1
         debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
         self._wait_for_ack("0x00 end")
