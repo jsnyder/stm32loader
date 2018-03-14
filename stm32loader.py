@@ -74,17 +74,24 @@ class CommandInterface:
         WRITE_UNPROTECT = 0x73
         READOUT_PROTECT = 0x82
         READOUT_UNPROTECT = 0x92
+        # not really listed under commands, but still...
+        # 'wake the bootloader' == 'activate USART' == 'synchronize'
+        SYNCHRONIZE = 0x7F
 
     class Reply:
         # See ST AN3155
         ACK = 0x79
         NACK = 0x1F
+        # not really an ack/nack reply, but still...
         EXTENDED_ERASE = 0x44
 
     extended_erase = 0
 
-    def __init__(self):
+    def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
         self.serial = None
+        self._swap_RTS_DTR = swap_rts_dtr
+        self._reset_active_high = reset_active_high
+        self._boot0_active_high = boot0_active_high
 
     def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
         self.serial = serial.Serial(
@@ -98,24 +105,15 @@ class CommandInterface:
             timeout=5               # set a timeout value, None for waiting forever
         )
 
-    def reset(self):
-        self.serial.setDTR(0)
-        time.sleep(0.1)
-        self.serial.setDTR(1)
-        time.sleep(0.5)
-
-    def init_chip(self):
-        # Set boot
-        self.serial.setRTS(0)
-        self.reset()
-
-        # Syncro
-        self.serial.write(b'\x7F')
+    def reset_from_system_memory(self):
+        self._enable_boot0(True)
+        self._reset()
+        self.serial.write(bytearray([self.Command.SYNCHRONIZE]))
         return self._wait_for_ack("Syncro")
 
-    def release_chip(self):
-        self.serial.setRTS(1)
-        self.reset()
+    def reset_from_flash(self):
+        self._enable_boot0(False)
+        self._reset()
 
     def command(self, command):
         command_byte = bytearray([command])
@@ -317,6 +315,34 @@ class CommandInterface:
             checksum = checksum ^ page_number
         self.serial.write(bytearray([checksum]))
 
+    def _reset(self):
+        self._enable_reset(True)
+        time.sleep(0.1)
+        self._enable_reset(False)
+        time.sleep(0.5)
+
+    def _enable_reset(self, enable=True):
+        # active low unless otherwise specified
+        level = 0 if enable else 1
+        if self._reset_active_high:
+            level = 1 - level
+
+        if self._swap_RTS_DTR:
+            self.serial.setRTS(level)
+        else:
+            self.serial.setDTR(level)
+
+    def _enable_boot0(self, enable=True):
+        # active low unless otherwise specified
+        level = 0 if enable else 1
+        if self._boot0_active_high:
+            level = 1 - level
+
+        if self._swap_RTS_DTR:
+            self.serial.setDTR(level)
+        else:
+            self.serial.setRTS(level)
+
     def _wait_for_ack(self, info=""):
         try:
             ack = bytearray(self.serial.read())[0]
@@ -342,7 +368,7 @@ class CommandInterface:
 
 
 def usage():
-    help_text = """Usage: %s [-hqVewvr] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
+    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
     -h          This help
     -q          Quiet
     -V          Verbose
@@ -350,6 +376,9 @@ def usage():
     -w          Write
     -v          Verify (recommended)
     -r          Read
+    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0.
+    -R          Make reset active high.
+    -B          Make boot0 active high.
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
@@ -373,11 +402,14 @@ if __name__ == "__main__":
         'verify': 0,
         'read': 0,
         'go_address': -1,
+        'swap_rts_dtr': False,
+        'reset_active_high': False,
+        'boot0_active_high': False,
     }
 
     try:
         # parse command-line arguments using getopt
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrp:b:a:l:g:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBp:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
         # this print something like "option -a not recognized"
@@ -405,6 +437,12 @@ if __name__ == "__main__":
             configuration['read'] = 1
         elif o == '-p':
             configuration['port'] = a
+        elif o == '-s':
+            configuration['swap_rts_dtr'] = True
+        elif o == '-R':
+            configuration['reset_active_high'] = True
+        elif o == '-B':
+            configuration['boot0_active_high'] = True
         elif o == '-b':
             configuration['baud'] = eval(a)
         elif o == '-a':
@@ -416,12 +454,16 @@ if __name__ == "__main__":
         else:
             assert False, "unhandled option"
 
-    interface = CommandInterface()
+    interface = CommandInterface(
+        swap_rts_dtr=configuration['swap_rts_dtr'],
+        reset_active_high=configuration['reset_active_high'],
+        boot0_active_high=configuration['boot0_active_high'],
+    )
     interface.open(configuration['port'], configuration['baud'])
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
         try:
-            interface.init_chip()
+            interface.reset_from_system_memory()
         except Exception:
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
 
@@ -463,4 +505,4 @@ if __name__ == "__main__":
             interface.go(configuration['go_address'])
 
     finally:
-        interface.release_chip()
+        interface.reset_from_flash()

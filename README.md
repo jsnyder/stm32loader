@@ -3,8 +3,6 @@ STM32Loader
 
 Python script which will talk to the STM32 bootloader to upload and download firmware.
 
-Original Version by: Ivan A-R <ivan@tuxotronic.org>.
-
 Compatible with Python version 2.6 to 2.7, 3.2 to 3.6.
 
 
@@ -20,6 +18,9 @@ Usage
     -w          Write
     -v          Verify (recommended)
     -r          Read
+    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0.
+    -R          Make reset active high.
+    -B          Make boot0 active high.
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
@@ -36,3 +37,13 @@ stm32loader.py -e -w -v somefile.bin
 ```
 
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then perform a verification after writing is finished.
+
+
+Acknowledgement
+---------------
+
+Original Version by: Ivan A-R <ivan@tuxotronic.org>.
+
+Inspiration for the configurable RTS/DTR and polarity feature:
+hhttps://github.com/pazzarpj/stm32loader .
+
