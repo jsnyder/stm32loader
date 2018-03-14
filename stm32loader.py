@@ -22,6 +22,9 @@
 # along with stm32loader; see the file COPYING3.  If not see
 # <http://www.gnu.org/licenses/>.
 
+
+from __future__ import print_function
+
 from functools import reduce
 import sys
 import getopt
@@ -115,8 +118,8 @@ class CommandInterface:
         self.reset()
 
     def command(self, command):
-        command_byte = bytes([command])
-        control_byte = bytes([command ^ 0xFF])
+        command_byte = bytearray([command])
+        control_byte = bytearray([command ^ 0xFF])
 
         self.serial.write(command_byte)
         self.serial.write(control_byte)
@@ -127,13 +130,13 @@ class CommandInterface:
         if not self.command(self.Command.GET):
             raise CmdException("Get (0x00) failed")
         debug(10, "*** Get interface")
-        length = self.serial.read()[0]
-        version = self.serial.read()[0]
+        length = bytearray(self.serial.read())[0]
+        version = bytearray(self.serial.read())[0]
         debug(10, "    Bootloader version: " + hex(version))
-        data = self.serial.read(length)
+        data = bytearray(self.serial.read(length))
         if self.Reply.EXTENDED_ERASE in data:
             self.extended_erase = 1
-        debug(10, "    Available commands: " + ", ".join(data))
+        debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
         self._wait_for_ack("0x00 end")
         return version
 
@@ -142,7 +145,7 @@ class CommandInterface:
             raise CmdException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
-        version = self.serial.read()[0]
+        version = bytearray(self.serial.read())[0]
         self.serial.read(2)
         self._wait_for_ack("0x01 end")
         debug(10, "    Bootloader version: " + hex(version))
@@ -153,10 +156,10 @@ class CommandInterface:
             raise CmdException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
-        length = self.serial.read()[0]
-        id_data = self.serial.read(length + 1)
+        length = bytearray(self.serial.read())[0]
+        id_data = bytearray(self.serial.read(length + 1))
         self._wait_for_ack("0x02 end")
-        _device_id = reduce(lambda x, y: x*0x100+y, id_data)
+        _device_id = reduce(lambda x, y: x * 0x100 + y, id_data)
         return _device_id
 
     def read_memory(self, address, length):
@@ -167,11 +170,11 @@ class CommandInterface:
         debug(10, "*** ReadMemory interface")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x11 address failed")
-        n = (length - 1) & 0xFF
-        checksum = n ^ 0xFF
-        self.serial.write(bytes([n, checksum]))
+        nr_of_bytes = (length - 1) & 0xFF
+        checksum = nr_of_bytes ^ 0xFF
+        self.serial.write(bytearray([nr_of_bytes, checksum]))
         self._wait_for_ack("0x11 length failed")
-        return self.serial.read(length)
+        return bytearray(self.serial.read(length))
 
     def go(self, address):
         if not self.command(self.Command.GO):
@@ -189,14 +192,14 @@ class CommandInterface:
         debug(10, "*** Write memory interface")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x31 address failed")
-        length = (len(data)-1) & 0xFF
-        debug(10, "    %s bytes to write" % [length + 1])
-        self.serial.write(bytes([length]))
+        nr_of_bytes = (len(data) - 1) & 0xFF
+        debug(10, "    %s bytes to write" % [nr_of_bytes + 1])
+        self.serial.write(bytearray([nr_of_bytes]))
         checksum = 0xFF
         for c in data:
             checksum = checksum ^ c
-            self.serial.write(bytes([c]))
-        self.serial.write(bytes([checksum]))
+            self.serial.write(bytearray([c]))
+        self.serial.write(bytearray([checksum]))
         self._wait_for_ack("0x31 programming failed")
         debug(10, "    Write memory done")
 
@@ -232,17 +235,18 @@ class CommandInterface:
         self.serial.timeout = tmp
         debug(10, "    Extended Erase memory done")
 
-    def write_protect(self, sectors):
+    def write_protect(self, pages):
         if not self.command(self.Command.WRITE_PROTECT):
             raise CmdException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
-        self.serial.write(bytes([((len(sectors) - 1) & 0xFF)]))
+        nr_of_pages = (len(pages) - 1) & 0xFF
+        self.serial.write(bytearray([nr_of_pages]))
         checksum = 0xFF
-        for c in sectors:
+        for c in pages:
             checksum = checksum ^ c
-            self.serial.write(bytes([c]))
-        self.serial.write(bytes([checksum]))
+            self.serial.write(bytearray([c]))
+        self.serial.write(bytearray([checksum]))
         self._wait_for_ack("0x63 write protect failed")
         debug(10, "    Write protect done")
 
@@ -287,16 +291,16 @@ class CommandInterface:
 
     def write_memory_data(self, address, data):
         length = len(data)
-        offs = 0
+        offset = 0
         while length > 256:
             debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-            self.write_memory(address, data[offs:offs + 256])
-            offs = offs + 256
-            address = address + 256
-            length = length - 256
+            self.write_memory(address, data[offset:offset + 256])
+            offset += 256
+            address += 256
+            length -= 256
         else:
             debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-        self.write_memory(address, data[offs:offs + length] + (b'\xff' * (256 - length)))
+        self.write_memory(address, data[offset:offset + length] + (b'\xff' * (256 - length)))
 
     def _global_erase(self):
         # global erase: n=255, see ST AN3155
@@ -306,16 +310,16 @@ class CommandInterface:
     def _page_erase(self, pages):
         # page erase, see ST AN3155
         nr_of_pages = (len(pages) - 1) & 0xFF
-        self.serial.write(bytes([nr_of_pages]))
+        self.serial.write(bytearray([nr_of_pages]))
         checksum = nr_of_pages
         for page_number in pages:
-            self.serial.write(bytes([page_number]))
+            self.serial.write(bytearray([page_number]))
             checksum = checksum ^ page_number
-        self.serial.write(bytes([checksum]))
+        self.serial.write(bytearray([checksum]))
 
     def _wait_for_ack(self, info=""):
         try:
-            ack = self.serial.read()[0]
+            ack = bytearray(self.serial.read())[0]
         except TypeError:
             raise CmdException("Can't read port or timeout")
 
@@ -334,7 +338,7 @@ class CommandInterface:
         byte1 = (address >> 16) & 0xFF
         byte0 = (address >> 24) & 0xFF
         checksum = byte0 ^ byte1 ^ byte2 ^ byte3
-        return bytes([byte0, byte1, byte2, byte3, checksum])
+        return bytearray([byte0, byte1, byte2, byte3, checksum])
 
 
 def usage():
@@ -430,7 +434,8 @@ if __name__ == "__main__":
         data_file = args[0] if args else None
 
         if configuration['write'] or configuration['verify']:
-            binary_data = open(data_file, 'rb').read()
+            with open(data_file, 'rb') as read_file:
+                binary_data = bytearray(read_file.read())
 
         if configuration['erase']:
             interface.erase_memory()
@@ -451,7 +456,8 @@ if __name__ == "__main__":
 
         if not configuration['write'] and configuration['read']:
             read_data = interface.read_memory_data(configuration['address'], configuration['length'])
-            open(data_file, 'wb').write(read_data)
+            with open(data_file, 'wb') as out_file:
+                out_file.write(read_data)
 
         if configuration['go_address'] != -1:
             interface.go(configuration['go_address'])
