@@ -32,8 +32,7 @@ import serial
 import time
 
 
-# Verbose level
-QUIET = 20
+VERBOSITY = 20
 
 CHIP_IDS = {
     # see ST AN2606
@@ -50,7 +49,7 @@ CHIP_IDS = {
 
 
 def debug(level, message):
-    if QUIET >= level:
+    if VERBOSITY >= level:
         print(message, file=sys.stderr)
 
 
@@ -91,10 +90,10 @@ class CommandInterface:
         self._reset_active_high = reset_active_high
         self._boot0_active_high = boot0_active_high
 
-    def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
+    def open(self, serial_port='/dev/tty.usbserial-ftCYPMYJ', baud_rate=115200):
         self.serial = serial.Serial(
-            port=a_port,
-            baudrate=a_baud_rate,
+            port=serial_port,
+            baudrate=baud_rate,
             bytesize=8,             # number of write_data bits
             parity=serial.PARITY_EVEN,
             stopbits=1,
@@ -224,11 +223,11 @@ class CommandInterface:
         self.serial.write(b'\xFF')
         self.serial.write(b'\xFF')
         self.serial.write(b'\x00')
-        tmp = self.serial.timeout
+        previous_timeout_value = self.serial.timeout
         self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
         self._wait_for_ack("0x44 erasing failed")
-        self.serial.timeout = tmp
+        self.serial.timeout = previous_timeout_value
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
@@ -415,42 +414,42 @@ if __name__ == "__main__":
         usage()
         sys.exit(2)
 
-    QUIET = 5
+    VERBOSITY = 5
 
-    for o, a in opts:
-        if o == '-V':
-            QUIET = 10
-        elif o == '-q':
-            QUIET = 0
-        elif o == '-h':
+    for option, value in opts:
+        if option == '-V':
+            VERBOSITY = 10
+        elif option == '-q':
+            VERBOSITY = 0
+        elif option == '-h':
             usage()
             sys.exit(0)
-        elif o == '-e':
+        elif option == '-e':
             configuration['erase'] = True
-        elif o == '-w':
+        elif option == '-w':
             configuration['write'] = True
-        elif o == '-v':
+        elif option == '-v':
             configuration['verify'] = True
-        elif o == '-r':
+        elif option == '-r':
             configuration['read'] = True
-        elif o == '-p':
-            configuration['port'] = a
-        elif o == '-s':
+        elif option == '-p':
+            configuration['port'] = value
+        elif option == '-s':
             configuration['swap_rts_dtr'] = True
-        elif o == '-R':
+        elif option == '-R':
             configuration['reset_active_high'] = True
-        elif o == '-B':
+        elif option == '-B':
             configuration['boot0_active_high'] = True
-        elif o == '-b':
-            configuration['baud'] = eval(a)
-        elif o == '-a':
-            configuration['address'] = eval(a)
-        elif o == '-g':
-            configuration['go_address'] = eval(a)
-        elif o == '-l':
-            configuration['length'] = eval(a)
+        elif option == '-b':
+            configuration['baud'] = eval(value)
+        elif option == '-a':
+            configuration['address'] = eval(value)
+        elif option == '-g':
+            configuration['go_address'] = eval(value)
+        elif option == '-l':
+            configuration['length'] = eval(value)
         else:
-            assert False, "unhandled option %s" % o
+            assert False, "unhandled option %s" % option
 
     interface = CommandInterface(
         swap_rts_dtr=configuration['swap_rts_dtr'],
