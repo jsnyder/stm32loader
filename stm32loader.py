@@ -32,8 +32,7 @@ import serial
 import time
 
 
-# Verbose level
-QUIET = 20
+VERBOSITY = 20
 
 CHIP_IDS = {
     # see ST AN2606
@@ -50,15 +49,15 @@ CHIP_IDS = {
 
 
 def debug(level, message):
-    if QUIET >= level:
+    if VERBOSITY >= level:
         print(message, file=sys.stderr)
 
 
-class CmdException(Exception):
+class CommandException(Exception):
     pass
 
 
-class CommandInterface:
+class Stm32Bootloader:
 
     class Command:
         # See ST AN3155
@@ -82,10 +81,8 @@ class CommandInterface:
         # See ST AN3155
         ACK = 0x79
         NACK = 0x1F
-        # not really an ack/nack reply, but still...
-        EXTENDED_ERASE = 0x44
 
-    extended_erase = 0
+    extended_erase = False
 
     def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
         self.serial = None
@@ -93,10 +90,10 @@ class CommandInterface:
         self._reset_active_high = reset_active_high
         self._boot0_active_high = boot0_active_high
 
-    def open(self, a_port='/dev/tty.usbserial-ftCYPMYJ', a_baud_rate=115200):
+    def open(self, serial_port='/dev/tty.usbserial-ftCYPMYJ', baud_rate=115200):
         self.serial = serial.Serial(
-            port=a_port,
-            baudrate=a_baud_rate,
+            port=serial_port,
+            baudrate=baud_rate,
             bytesize=8,             # number of write_data bits
             parity=serial.PARITY_EVEN,
             stopbits=1,
@@ -126,21 +123,21 @@ class CommandInterface:
 
     def get(self):
         if not self.command(self.Command.GET):
-            raise CmdException("Get (0x00) failed")
+            raise CommandException("Get (0x00) failed")
         debug(10, "*** Get interface")
         length = bytearray(self.serial.read())[0]
         version = bytearray(self.serial.read())[0]
         debug(10, "    Bootloader version: " + hex(version))
         data = bytearray(self.serial.read(length))
-        if self.Reply.EXTENDED_ERASE in data:
-            self.extended_erase = 1
+        if self.Command.EXTENDED_ERASE in data:
+            self.extended_erase = True
         debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
         self._wait_for_ack("0x00 end")
         return version
 
     def get_version(self):
         if not self.command(self.Command.GET_VERSION):
-            raise CmdException("GetVersion (0x01) failed")
+            raise CommandException("GetVersion (0x01) failed")
 
         debug(10, "*** GetVersion interface")
         version = bytearray(self.serial.read())[0]
@@ -151,7 +148,7 @@ class CommandInterface:
 
     def get_id(self):
         if not self.command(self.Command.GET_ID):
-            raise CmdException("GetID (0x02) failed")
+            raise CommandException("GetID (0x02) failed")
 
         debug(10, "*** GetID interface")
         length = bytearray(self.serial.read())[0]
@@ -163,7 +160,7 @@ class CommandInterface:
     def read_memory(self, address, length):
         assert(length <= 256)
         if not self.command(self.Command.READ_MEMORY):
-            raise CmdException("ReadMemory (0x11) failed")
+            raise CommandException("ReadMemory (0x11) failed")
 
         debug(10, "*** ReadMemory interface")
         self.serial.write(self._encode_address(address))
@@ -176,7 +173,7 @@ class CommandInterface:
 
     def go(self, address):
         if not self.command(self.Command.GO):
-            raise CmdException("Go (0x21) failed")
+            raise CommandException("Go (0x21) failed")
 
         debug(10, "*** Go interface")
         self.serial.write(self._encode_address(address))
@@ -185,7 +182,7 @@ class CommandInterface:
     def write_memory(self, address, data):
         assert(len(data) <= 256)
         if not self.command(self.Command.WRITE_MEMORY):
-            raise CmdException("Write memory (0x31) failed")
+            raise CommandException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory interface")
         self.serial.write(self._encode_address(address))
@@ -203,10 +200,10 @@ class CommandInterface:
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
-            return interface.extended_erase_memory()
+            return bootloader.extended_erase_memory()
 
         if not self.command(self.Command.ERASE):
-            raise CmdException("Erase memory (0x43) failed")
+            raise CommandException("Erase memory (0x43) failed")
 
         debug(10, "*** Erase memory interface")
 
@@ -219,23 +216,23 @@ class CommandInterface:
 
     def extended_erase_memory(self):
         if not self.command(self.Command.EXTENDED_ERASE):
-            raise CmdException("Extended Erase memory (0x44) failed")
+            raise CommandException("Extended Erase memory (0x44) failed")
 
         debug(10, "*** Extended Erase memory interface")
         # Global mass erase and checksum byte
         self.serial.write(b'\xFF')
         self.serial.write(b'\xFF')
         self.serial.write(b'\x00')
-        tmp = self.serial.timeout
+        previous_timeout_value = self.serial.timeout
         self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
         self._wait_for_ack("0x44 erasing failed")
-        self.serial.timeout = tmp
+        self.serial.timeout = previous_timeout_value
         debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
         if not self.command(self.Command.WRITE_PROTECT):
-            raise CmdException("Write Protect memory (0x63) failed")
+            raise CommandException("Write Protect memory (0x63) failed")
 
         debug(10, "*** Write protect interface")
         nr_of_pages = (len(pages) - 1) & 0xFF
@@ -250,7 +247,7 @@ class CommandInterface:
 
     def write_unprotect(self):
         if not self.command(self.Command.WRITE_UNPROTECT):
-            raise CmdException("Write Unprotect (0x73) failed")
+            raise CommandException("Write Unprotect (0x73) failed")
 
         debug(10, "*** Write Unprotect interface")
         self._wait_for_ack("0x73 write unprotect failed")
@@ -259,7 +256,7 @@ class CommandInterface:
 
     def readout_protect(self):
         if not self.command(self.Command.READOUT_PROTECT):
-            raise CmdException("Readout protect (0x82) failed")
+            raise CommandException("Readout protect (0x82) failed")
 
         debug(10, "*** Readout protect interface")
         self._wait_for_ack("0x82 readout protect failed")
@@ -268,7 +265,7 @@ class CommandInterface:
 
     def readout_unprotect(self):
         if not self.command(self.Command.READOUT_UNPROTECT):
-            raise CmdException("Readout unprotect (0x92) failed")
+            raise CommandException("Readout unprotect (0x92) failed")
 
         debug(10, "*** Readout Unprotect interface")
         self._wait_for_ack("0x92 readout unprotect failed")
@@ -347,13 +344,13 @@ class CommandInterface:
         try:
             ack = bytearray(self.serial.read())[0]
         except TypeError:
-            raise CmdException("Can't read port or timeout")
+            raise CommandException("Can't read port or timeout")
 
         if ack == self.Reply.NACK:
-            raise CmdException("NACK " + info)
+            raise CommandException("NACK " + info)
 
         if ack != self.Reply.ACK:
-            raise CmdException("Unknown response. " + info + ": " + hex(ack))
+            raise CommandException("Unknown response. " + info + ": " + hex(ack))
 
         return 1
 
@@ -397,10 +394,10 @@ if __name__ == "__main__":
         'port': '/dev/tty.usbserial-ftCYPMYJ',
         'baud': 115200,
         'address': 0x08000000,
-        'erase': 0,
-        'write': 0,
-        'verify': 0,
-        'read': 0,
+        'erase': False,
+        'write': False,
+        'verify': False,
+        'read': False,
         'go_address': -1,
         'swap_rts_dtr': False,
         'reset_active_high': False,
@@ -417,59 +414,59 @@ if __name__ == "__main__":
         usage()
         sys.exit(2)
 
-    QUIET = 5
+    VERBOSITY = 5
 
-    for o, a in opts:
-        if o == '-V':
-            QUIET = 10
-        elif o == '-q':
-            QUIET = 0
-        elif o == '-h':
+    for option, value in opts:
+        if option == '-V':
+            VERBOSITY = 10
+        elif option == '-q':
+            VERBOSITY = 0
+        elif option == '-h':
             usage()
             sys.exit(0)
-        elif o == '-e':
-            configuration['erase'] = 1
-        elif o == '-w':
-            configuration['write'] = 1
-        elif o == '-v':
-            configuration['verify'] = 1
-        elif o == '-r':
-            configuration['read'] = 1
-        elif o == '-p':
-            configuration['port'] = a
-        elif o == '-s':
+        elif option == '-e':
+            configuration['erase'] = True
+        elif option == '-w':
+            configuration['write'] = True
+        elif option == '-v':
+            configuration['verify'] = True
+        elif option == '-r':
+            configuration['read'] = True
+        elif option == '-p':
+            configuration['port'] = value
+        elif option == '-s':
             configuration['swap_rts_dtr'] = True
-        elif o == '-R':
+        elif option == '-R':
             configuration['reset_active_high'] = True
-        elif o == '-B':
+        elif option == '-B':
             configuration['boot0_active_high'] = True
-        elif o == '-b':
-            configuration['baud'] = eval(a)
-        elif o == '-a':
-            configuration['address'] = eval(a)
-        elif o == '-g':
-            configuration['go_address'] = eval(a)
-        elif o == '-l':
-            configuration['length'] = eval(a)
+        elif option == '-b':
+            configuration['baud'] = eval(value)
+        elif option == '-a':
+            configuration['address'] = eval(value)
+        elif option == '-g':
+            configuration['go_address'] = eval(value)
+        elif option == '-l':
+            configuration['length'] = eval(value)
         else:
-            assert False, "unhandled option"
+            assert False, "unhandled option %s" % option
 
-    interface = CommandInterface(
+    bootloader = Stm32Bootloader(
         swap_rts_dtr=configuration['swap_rts_dtr'],
         reset_active_high=configuration['reset_active_high'],
         boot0_active_high=configuration['boot0_active_high'],
     )
-    interface.open(configuration['port'], configuration['baud'])
+    bootloader.open(configuration['port'], configuration['baud'])
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
         try:
-            interface.reset_from_system_memory()
+            bootloader.reset_from_system_memory()
         except Exception:
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
 
-        boot_version = interface.get()
+        boot_version = bootloader.get()
         debug(0, "Bootloader version %X" % boot_version)
-        device_id = interface.get_id()
+        device_id = bootloader.get_id()
         debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 
         binary_data = None
@@ -480,13 +477,13 @@ if __name__ == "__main__":
                 binary_data = bytearray(read_file.read())
 
         if configuration['erase']:
-            interface.erase_memory()
+            bootloader.erase_memory()
 
         if configuration['write']:
-            interface.write_memory_data(configuration['address'], binary_data)
+            bootloader.write_memory_data(configuration['address'], binary_data)
 
         if configuration['verify']:
-            read_data = interface.read_memory_data(configuration['address'], len(binary_data))
+            read_data = bootloader.read_memory_data(configuration['address'], len(binary_data))
             if binary_data == read_data:
                 print("Verification OK")
             else:
@@ -497,12 +494,12 @@ if __name__ == "__main__":
                         print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
 
         if not configuration['write'] and configuration['read']:
-            read_data = interface.read_memory_data(configuration['address'], configuration['length'])
+            read_data = bootloader.read_memory_data(configuration['address'], configuration['length'])
             with open(data_file, 'wb') as out_file:
                 out_file.write(read_data)
 
         if configuration['go_address'] != -1:
-            interface.go(configuration['go_address'])
+            bootloader.go(configuration['go_address'])
 
     finally:
-        interface.reset_from_flash()
+        bootloader.reset_from_flash()
