@@ -83,7 +83,7 @@ class CommandInterface:
         ACK = 0x79
         NACK = 0x1F
 
-    extended_erase = 0
+    extended_erase = False
 
     def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
         self.serial = None
@@ -131,7 +131,7 @@ class CommandInterface:
         debug(10, "    Bootloader version: " + hex(version))
         data = bytearray(self.serial.read(length))
         if self.Command.EXTENDED_ERASE in data:
-            self.extended_erase = 1
+            self.extended_erase = True
         debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
         self._wait_for_ack("0x00 end")
         return version
@@ -395,10 +395,10 @@ if __name__ == "__main__":
         'port': '/dev/tty.usbserial-ftCYPMYJ',
         'baud': 115200,
         'address': 0x08000000,
-        'erase': 0,
-        'write': 0,
-        'verify': 0,
-        'read': 0,
+        'erase': False,
+        'write': False,
+        'verify': False,
+        'read': False,
         'go_address': -1,
         'swap_rts_dtr': False,
         'reset_active_high': False,
@@ -426,13 +426,13 @@ if __name__ == "__main__":
             usage()
             sys.exit(0)
         elif o == '-e':
-            configuration['erase'] = 1
+            configuration['erase'] = True
         elif o == '-w':
-            configuration['write'] = 1
+            configuration['write'] = True
         elif o == '-v':
-            configuration['verify'] = 1
+            configuration['verify'] = True
         elif o == '-r':
-            configuration['read'] = 1
+            configuration['read'] = True
         elif o == '-p':
             configuration['port'] = a
         elif o == '-s':
