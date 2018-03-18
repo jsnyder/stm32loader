@@ -91,16 +91,27 @@ class Stm32Bootloader:
         self._boot0_active_high = boot0_active_high
 
     def open(self, serial_port='/dev/tty.usbserial-ftCYPMYJ', baud_rate=115200):
-        self.serial = serial.Serial(
-            port=serial_port,
-            baudrate=baud_rate,
-            bytesize=8,             # number of write_data bits
-            parity=serial.PARITY_EVEN,
-            stopbits=1,
-            xonxoff=0,              # don't enable software flow control
-            rtscts=0,               # don't enable RTS/CTS flow control
-            timeout=5               # set a timeout value, None for waiting forever
-        )
+        try:
+            self.serial = serial.Serial(
+                port=serial_port,
+                baudrate=baud_rate,
+                bytesize=8,             # number of write_data bits
+                parity=serial.PARITY_EVEN,
+                stopbits=1,
+                xonxoff=0,              # don't enable software flow control
+                rtscts=0,               # don't enable RTS/CTS flow control
+                timeout=5               # set a timeout value, None for waiting forever
+            )
+        except serial.serialutil.SerialException as e:
+            sys.stderr.write(str(e) + "\n")
+            sys.stderr.write(
+                "Is the device connected and powered correctly?\n"
+                "Please use the -p option to select the correct serial port. Examples:\n"
+                "  -p COM3\n"
+                "  -p /dev/ttyS0"
+                "  -p /dev/tty.usbserial-ftCYPMYJ\n"
+            )
+            exit(1)
 
     def reset_from_system_memory(self):
         self._enable_boot0(True)
