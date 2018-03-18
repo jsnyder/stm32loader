@@ -565,6 +565,8 @@ if __name__ == "__main__":
             bootloader.reset_from_system_memory()
         except Exception:
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
+            bootloader.reset_from_flash()
+            sys.exit(1)
 
         boot_version = bootloader.get()
         high = (boot_version & 0xF0) >> 4
