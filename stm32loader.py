@@ -32,6 +32,9 @@ import serial
 import time
 
 
+VERSION = (0, 3, 0)
+__version__ = '.'.join(map(str, VERSION))
+
 VERBOSITY = 20
 
 CHIP_IDS = {
@@ -91,16 +94,27 @@ class Stm32Bootloader:
         self._boot0_active_high = boot0_active_high
 
     def open(self, serial_port='/dev/tty.usbserial-ftCYPMYJ', baud_rate=115200):
-        self.serial = serial.Serial(
-            port=serial_port,
-            baudrate=baud_rate,
-            bytesize=8,             # number of write_data bits
-            parity=serial.PARITY_EVEN,
-            stopbits=1,
-            xonxoff=0,              # don't enable software flow control
-            rtscts=0,               # don't enable RTS/CTS flow control
-            timeout=5               # set a timeout value, None for waiting forever
-        )
+        try:
+            self.serial = serial.Serial(
+                port=serial_port,
+                baudrate=baud_rate,
+                bytesize=8,             # number of write_data bits
+                parity=serial.PARITY_EVEN,
+                stopbits=1,
+                xonxoff=0,              # don't enable software flow control
+                rtscts=0,               # don't enable RTS/CTS flow control
+                timeout=5               # set a timeout value, None for waiting forever
+            )
+        except serial.serialutil.SerialException as e:
+            sys.stderr.write(str(e) + "\n")
+            sys.stderr.write(
+                "Is the device connected and powered correctly?\n"
+                "Please use the -p option to select the correct serial port. Examples:\n"
+                "  -p COM3\n"
+                "  -p /dev/ttyS0"
+                "  -p /dev/tty.usbserial-ftCYPMYJ\n"
+            )
+            exit(1)
 
     def reset_from_system_memory(self):
         self._enable_boot0(True)
@@ -370,12 +384,12 @@ def usage():
     -q          Quiet
     -V          Verbose
     -e          Erase (note: this is required on previously written memory)
-    -w          Write
-    -v          Verify (recommended)
-    -r          Read
-    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0.
-    -R          Make reset active high.
-    -B          Make boot0 active high.
+    -w          Write file content to flash
+    -v          Verify flash content versus local file (recommended)
+    -r          Read from flash and store in local file
+    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
+    -R          Make reset active high
+    -B          Make boot0 active high
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
@@ -470,6 +484,7 @@ if __name__ == "__main__":
         debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 
         binary_data = None
+        # if there's a non-named argument left, that's a file name
         data_file = args[0] if args else None
 
         if configuration['write'] or configuration['verify']:
