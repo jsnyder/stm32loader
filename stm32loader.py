@@ -182,7 +182,7 @@ class Stm32Bootloader:
     def get(self):
         if not self.command(self.Command.GET):
             raise CommandException("Get (0x00) failed")
-        debug(10, "*** Get interface")
+        debug(10, "*** Get command")
         length = bytearray(self.serial.read())[0]
         version = bytearray(self.serial.read())[0]
         debug(10, "    Bootloader version: " + hex(version))
@@ -197,7 +197,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.GET_VERSION):
             raise CommandException("GetVersion (0x01) failed")
 
-        debug(10, "*** GetVersion interface")
+        debug(10, "*** GetVersion command")
         version = bytearray(self.serial.read())[0]
         self.serial.read(2)
         self._wait_for_ack("0x01 end")
@@ -208,7 +208,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.GET_ID):
             raise CommandException("GetID (0x02) failed")
 
-        debug(10, "*** GetID interface")
+        debug(10, "*** GetID command")
         length = bytearray(self.serial.read())[0]
         id_data = bytearray(self.serial.read(length + 1))
         self._wait_for_ack("0x02 end")
@@ -238,7 +238,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.READ_MEMORY):
             raise CommandException("ReadMemory (0x11) failed")
 
-        debug(10, "*** ReadMemory interface")
+        debug(10, "*** ReadMemory command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x11 address failed")
         nr_of_bytes = (length - 1) & 0xFF
@@ -251,7 +251,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.GO):
             raise CommandException("Go (0x21) failed")
 
-        debug(10, "*** Go interface")
+        debug(10, "*** Go command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x21 go failed")
 
@@ -260,7 +260,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.WRITE_MEMORY):
             raise CommandException("Write memory (0x31) failed")
 
-        debug(10, "*** Write memory interface")
+        debug(10, "*** Write memory command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x31 address failed")
         nr_of_bytes = (len(data) - 1) & 0xFF
@@ -281,7 +281,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.ERASE):
             raise CommandException("Erase memory (0x43) failed")
 
-        debug(10, "*** Erase memory interface")
+        debug(10, "*** Erase memory command")
 
         if sectors:
             self._page_erase(sectors)
@@ -294,7 +294,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.EXTENDED_ERASE):
             raise CommandException("Extended Erase memory (0x44) failed")
 
-        debug(10, "*** Extended Erase memory interface")
+        debug(10, "*** Extended Erase memory command")
         # Global mass erase and checksum byte
         self.serial.write(b'\xFF')
         self.serial.write(b'\xFF')
@@ -310,7 +310,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.WRITE_PROTECT):
             raise CommandException("Write Protect memory (0x63) failed")
 
-        debug(10, "*** Write protect interface")
+        debug(10, "*** Write protect command")
         nr_of_pages = (len(pages) - 1) & 0xFF
         self.serial.write(bytearray([nr_of_pages]))
         checksum = 0xFF
@@ -325,7 +325,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.WRITE_UNPROTECT):
             raise CommandException("Write Unprotect (0x73) failed")
 
-        debug(10, "*** Write Unprotect interface")
+        debug(10, "*** Write Unprotect command")
         self._wait_for_ack("0x73 write unprotect failed")
         self._wait_for_ack("0x73 write unprotect 2 failed")
         debug(10, "    Write Unprotect done")
@@ -334,7 +334,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.READOUT_PROTECT):
             raise CommandException("Readout protect (0x82) failed")
 
-        debug(10, "*** Readout protect interface")
+        debug(10, "*** Readout protect command")
         self._wait_for_ack("0x82 readout protect failed")
         self._wait_for_ack("0x82 readout protect 2 failed")
         debug(10, "    Read protect done")
