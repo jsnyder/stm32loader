@@ -484,6 +484,7 @@ if __name__ == "__main__":
         debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
 
         binary_data = None
+        # if there's a non-named argument left, that's a file name
         data_file = args[0] if args else None
 
         if configuration['write'] or configuration['verify']:
