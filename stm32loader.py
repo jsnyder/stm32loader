@@ -451,8 +451,9 @@ class Stm32Bootloader:
 
 
 def usage():
-    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
+    help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
     -e          Erase (note: this is required on previously written memory)
+    -u          Unprotect in case erase fails
     -w          Write file content to flash
     -v          Verify flash content versus local file (recommended)
     -r          Read from flash and store in local file
@@ -487,6 +488,7 @@ if __name__ == "__main__":
         'parity': serial.PARITY_EVEN,
         'address': 0x08000000,
         'erase': False,
+        'unprotect': False,
         'write': False,
         'verify': False,
         'read': False,
@@ -499,7 +501,7 @@ if __name__ == "__main__":
 
     try:
         # parse command-line arguments using getopt
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBP:f:p:b:a:l:g:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVeuwvrsRBP:f:p:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
         # this print something like "option -a not recognized"
@@ -519,6 +521,8 @@ if __name__ == "__main__":
             sys.exit(0)
         elif option == '-e':
             configuration['erase'] = True
+        elif option == '-u':
+            configuration['unprotect'] = True
         elif option == '-w':
             configuration['write'] = True
         elif option == '-v':
@@ -594,8 +598,28 @@ if __name__ == "__main__":
             with open(data_file, 'rb') as read_file:
                 binary_data = bytearray(read_file.read())
 
+        if configuration['unprotect']:
+            try:
+                bootloader.readout_unprotect()
+            except CommandException:
+                # may be caused by readout protection
+                debug(0, "Erase failed -- probably due to readout protection")
+                debug(0, "Quit")
+                bootloader.reset_from_flash()
+                sys.exit(1)
+
         if configuration['erase']:
-            bootloader.erase_memory()
+            try:
+                bootloader.erase_memory()
+            except CommandException:
+                # may be caused by readout protection
+                debug(
+                    0,
+                    "Erase failed -- probably due to readout protection\n"
+                    "consider using the -u (unprotect) option."
+                )
+                bootloader.reset_from_flash()
+                sys.exit(1)
 
         if configuration['write']:
             bootloader.write_memory_data(configuration['address'], binary_data)
