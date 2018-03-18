@@ -12,16 +12,17 @@ Usage
 ```
 ./stm32loader.py [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [file.bin]
     -h          This help
-    -q          Quiet
-    -V          Verbose
+    -q          Quiet mode
+    -V          Verbose mode
     -e          Erase (note: this is required on previously written memory)
     -w          Write file content to flash
     -v          Verify flash content versus local file (recommended)
     -r          Read from flash and store in local file
+    -l length   Length of read
     -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
     -R          Make reset active high
     -B          Make boot0 active high
-    -l length   Length of read
+    -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
     -a address  Target address

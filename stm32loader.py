@@ -85,6 +85,11 @@ class Stm32Bootloader:
         ACK = 0x79
         NACK = 0x1F
 
+    PARITY = dict(
+        even=serial.PARITY_EVEN,
+        none=serial.PARITY_NONE,
+    )
+
     extended_erase = False
 
     def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
@@ -93,17 +98,21 @@ class Stm32Bootloader:
         self._reset_active_high = reset_active_high
         self._boot0_active_high = boot0_active_high
 
-    def open(self, serial_port='/dev/tty.usbserial-ftCYPMYJ', baud_rate=115200):
+    def open(self, serial_port, baud_rate=115200, parity=serial.PARITY_EVEN):
         try:
             self.serial = serial.Serial(
                 port=serial_port,
                 baudrate=baud_rate,
-                bytesize=8,             # number of write_data bits
-                parity=serial.PARITY_EVEN,
+                # number of write_data bits
+                bytesize=8,
+                parity=parity,
                 stopbits=1,
-                xonxoff=0,              # don't enable software flow control
-                rtscts=0,               # don't enable RTS/CTS flow control
-                timeout=5               # set a timeout value, None for waiting forever
+                # don't enable software flow control
+                xonxoff=0,
+                # don't enable RTS/CTS flow control
+                rtscts=0,
+                # set a timeout value, None for waiting forever
+                timeout=5,
             )
         except serial.serialutil.SerialException as e:
             sys.stderr.write(str(e) + "\n")
@@ -379,18 +388,19 @@ class Stm32Bootloader:
 
 
 def usage():
-    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-a address] [-g address] [file.bin]
+    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [file.bin]
     -h          This help
-    -q          Quiet
-    -V          Verbose
+    -q          Quiet mode
+    -V          Verbose mode
     -e          Erase (note: this is required on previously written memory)
     -w          Write file content to flash
     -v          Verify flash content versus local file (recommended)
     -r          Read from flash and store in local file
+    -l length   Length of read
     -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
     -R          Make reset active high
     -B          Make boot0 active high
-    -l length   Length of read
+    -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
     -b baud     Baud speed (default: 115200)
     -a address  Target address
@@ -407,6 +417,7 @@ if __name__ == "__main__":
     configuration = {
         'port': '/dev/tty.usbserial-ftCYPMYJ',
         'baud': 115200,
+        'parity': serial.PARITY_EVEN,
         'address': 0x08000000,
         'erase': False,
         'write': False,
@@ -420,7 +431,7 @@ if __name__ == "__main__":
 
     try:
         # parse command-line arguments using getopt
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBp:b:a:l:g:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBP:p:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
         # this print something like "option -a not recognized"
@@ -456,6 +467,9 @@ if __name__ == "__main__":
             configuration['boot0_active_high'] = True
         elif option == '-b':
             configuration['baud'] = eval(value)
+        elif option == '-P':
+            assert value.lower() in Stm32Bootloader.PARITY, "Parity value not recognized: '{0}'.".format(value)
+            configuration['parity'] = Stm32Bootloader.PARITY[value.lower()]
         elif option == '-a':
             configuration['address'] = eval(value)
         elif option == '-g':
@@ -470,7 +484,11 @@ if __name__ == "__main__":
         reset_active_high=configuration['reset_active_high'],
         boot0_active_high=configuration['boot0_active_high'],
     )
-    bootloader.open(configuration['port'], configuration['baud'])
+    bootloader.open(
+        configuration['port'],
+        configuration['baud'],
+        configuration['parity'],
+    )
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
         try:
