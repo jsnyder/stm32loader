@@ -329,7 +329,6 @@ class Stm32Bootloader:
 
         debug(10, "*** Write Unprotect command")
         self._wait_for_ack("0x73 write unprotect failed")
-        self._wait_for_ack("0x73 write unprotect 2 failed")
         debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
@@ -338,17 +337,19 @@ class Stm32Bootloader:
 
         debug(10, "*** Readout protect command")
         self._wait_for_ack("0x82 readout protect failed")
-        self._wait_for_ack("0x82 readout protect 2 failed")
         debug(10, "    Read protect done")
 
     def readout_unprotect(self):
         if not self.command(self.Command.READOUT_UNPROTECT):
             raise CommandException("Readout unprotect (0x92) failed")
 
-        debug(10, "*** Readout Unprotect interface")
+        debug(10, "*** Readout Unprotect command")
         self._wait_for_ack("0x92 readout unprotect failed")
-        self._wait_for_ack("0x92 readout unprotect 2 failed")
-        debug(10, "    Read Unprotect done")
+        debug(20, "    Mass erase -- this may take a while")
+        time.sleep(20)
+        debug(20, "    Unprotect / mass erase done")
+        debug(20, "    Reset after automatic chip reset due to readout unprotect")
+        self.reset_from_system_memory()
 
     def read_memory_data(self, address, length):
         data = bytearray()
