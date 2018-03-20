@@ -44,6 +44,14 @@ stm32loader.py -e -w -v somefile.bin
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then perform a verification after writing is finished.
 
 
+Reference documents
+-------------------
+
+* ST AN2606: STM32 microcontroller system memory boot mode
+* ST AN3155: USART protocol used in the STM32 bootloader
+* ST AN4872: BlueNRG-1 and BlueNRG-2 UART bootloader protocol
+
+
 Acknowledgement
 ---------------
 

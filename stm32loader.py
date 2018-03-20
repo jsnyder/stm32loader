@@ -79,7 +79,7 @@ class CommandException(Exception):
 class Stm32Bootloader:
 
     class Command:
-        # See ST AN3155
+        # See ST AN3155, AN4872
         GET = 0x00
         GET_VERSION = 0x01
         GET_ID = 0x02
@@ -87,17 +87,19 @@ class Stm32Bootloader:
         GO = 0x21
         WRITE_MEMORY = 0x31
         ERASE = 0x43
+        READOUT_PROTECT = 0x82
+        READOUT_UNPROTECT = 0x92
+        # these not supported on BlueNRG
         EXTENDED_ERASE = 0x44
         WRITE_PROTECT = 0x63
         WRITE_UNPROTECT = 0x73
-        READOUT_PROTECT = 0x82
-        READOUT_UNPROTECT = 0x92
+
         # not really listed under commands, but still...
         # 'wake the bootloader' == 'activate USART' == 'synchronize'
         SYNCHRONIZE = 0x7F
 
     class Reply:
-        # See ST AN3155
+        # See ST AN3155, AN4872
         ACK = 0x79
         NACK = 0x1F
 
