@@ -35,7 +35,7 @@ import time
 VERSION = (0, 3, 0)
 __version__ = '.'.join(map(str, VERSION))
 
-VERBOSITY = 20
+VERBOSITY = 5
 
 CHIP_IDS = {
     # see ST AN2606
@@ -278,7 +278,7 @@ class Stm32Bootloader:
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
-            return bootloader.extended_erase_memory()
+            return self.extended_erase_memory()
 
         if not self.command(self.Command.ERASE):
             raise CommandException("Erase memory (0x43) failed")
@@ -480,8 +480,9 @@ def usage():
     print(help_text)
 
 
-if __name__ == "__main__":
-    
+def _parse_arguments():
+    global VERBOSITY
+
     configuration = {
         'port': '/dev/tty.usbserial-ftCYPMYJ',
         'baud': 115200,
@@ -498,7 +499,6 @@ if __name__ == "__main__":
         'boot0_active_high': False,
         'family': None,
     }
-
     try:
         # parse command-line arguments using getopt
         opts, args = getopt.getopt(sys.argv[1:], "hqVeuwvrsRBP:f:p:b:a:l:g:")
@@ -506,10 +506,8 @@ if __name__ == "__main__":
         # print help information and exit:
         # this print something like "option -a not recognized"
         print(str(err))
-        usage()
+        _usage()
         sys.exit(2)
-
-    VERBOSITY = 5
 
     for option, value in opts:
         if option == '-V':
@@ -517,7 +515,7 @@ if __name__ == "__main__":
         elif option == '-q':
             VERBOSITY = 0
         elif option == '-h':
-            usage()
+            _usage()
             sys.exit(0)
         elif option == '-e':
             configuration['erase'] = True
@@ -553,6 +551,12 @@ if __name__ == "__main__":
         else:
             assert False, "unhandled option %s" % option
 
+    configuration['data_file'] = args[0] if args else None
+
+    return configuration
+
+
+def _connect(configuration):
     bootloader = Stm32Bootloader(
         swap_rts_dtr=configuration['swap_rts_dtr'],
         reset_active_high=configuration['reset_active_high'],
@@ -565,83 +569,141 @@ if __name__ == "__main__":
     )
     debug(10, "Open port %(port)s, baud %(baud)d" % {'port': configuration['port'], 'baud': configuration['baud']})
     try:
+        bootloader.reset_from_system_memory()
+    except Exception:
+        print("Can't init. Ensure that BOOT0 is enabled and reset device")
+        bootloader.reset_from_flash()
+        sys.exit(1)
+
+    return bootloader
+
+
+def _perform_commands(bootloader, configuration):
+    boot_version = bootloader.get()
+    debug(0, "Bootloader version %X" % boot_version)
+    device_id = bootloader.get_id()
+    debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+    binary_data = None
+    # if there's a non-named argument left, that's a file name
+    if configuration['write'] or configuration['verify']:
+        with open(configuration['data_file'], 'rb') as read_file:
+            binary_data = bytearray(read_file.read())
+    if configuration['unprotect']:
         try:
-            bootloader.reset_from_system_memory()
-        except Exception:
-            print("Can't init. Ensure that BOOT0 is enabled and reset device")
+            bootloader.readout_unprotect()
+        except CommandException:
+            # may be caused by readout protection
+            debug(0, "Erase failed -- probably due to readout protection")
+            debug(0, "Quit")
+            bootloader.reset_from_flash()
+            sys.exit(1)
+    if configuration['erase']:
+        try:
+            bootloader.erase_memory()
+        except CommandException:
+            # may be caused by readout protection
+            debug(
+                0,
+                "Erase failed -- probably due to readout protection\n"
+                "consider using the -u (unprotect) option."
+            )
+            bootloader.reset_from_flash()
+            sys.exit(1)
+    if configuration['write']:
+        bootloader.write_memory_data(configuration['address'], binary_data)
+    if configuration['verify']:
+        read_data = bootloader.read_memory_data(configuration['address'], len(binary_data))
+        if binary_data == read_data:
+            print("Verification OK")
+        else:
+            print("Verification FAILED")
+            print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
+            for i in range(0, len(binary_data)):
+                if binary_data[i] != read_data[i]:
+                    print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
+    if not configuration['write'] and configuration['read']:
+        read_data = bootloader.read_memory_data(configuration['address'], configuration['length'])
+        with open(configuration['data_file'], 'wb') as out_file:
+            out_file.write(read_data)
+    if configuration['go_address'] != -1:
+        bootloader.go(configuration['go_address'])
+
+    boot_version = bootloader.get()
+    high = (boot_version & 0xF0) >> 4
+    low = boot_version & 0x0F
+    debug(0, "Bootloader version: V%d.%d" % (high, low))
+    device_id = bootloader.get_id()
+    debug(0, "Chip ID: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+
+    family = configuration['family']
+    if not family:
+        debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
+    else:
+        device_uid = bootloader.get_uid(family)
+        device_uid_string = bootloader.format_uid(device_uid)
+        debug(0, "Device UID: %s" % device_uid_string)
+
+        flash_size = bootloader.get_flash_size(family)
+        debug(0, "Flash size: %d KiB" % flash_size)
+
+    binary_data = None
+    # if there's a non-named argument left, that's a file name
+    data_file = args[0] if args else None
+
+    if configuration['write'] or configuration['verify']:
+        with open(data_file, 'rb') as read_file:
+            binary_data = bytearray(read_file.read())
+
+    if configuration['unprotect']:
+        try:
+            bootloader.readout_unprotect()
+        except CommandException:
+            # may be caused by readout protection
+            debug(0, "Erase failed -- probably due to readout protection")
+            debug(0, "Quit")
             bootloader.reset_from_flash()
             sys.exit(1)
 
-        boot_version = bootloader.get()
-        high = (boot_version & 0xF0) >> 4
-        low = boot_version & 0x0F
-        debug(0, "Bootloader version: V%d.%d" % (high, low))
-        device_id = bootloader.get_id()
-        debug(0, "Chip ID: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+    if configuration['erase']:
+        try:
+            bootloader.erase_memory()
+        except CommandException:
+            # may be caused by readout protection
+            debug(
+                0,
+                "Erase failed -- probably due to readout protection\n"
+                "consider using the -u (unprotect) option."
+            )
+            bootloader.reset_from_flash()
+            sys.exit(1)
 
-        family = configuration['family']
-        if not family:
-            debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
+    if configuration['write']:
+        bootloader.write_memory_data(configuration['address'], binary_data)
+
+    if configuration['verify']:
+        read_data = bootloader.read_memory_data(configuration['address'], len(binary_data))
+        if binary_data == read_data:
+            print("Verification OK")
         else:
-            device_uid = bootloader.get_uid(family)
-            device_uid_string = bootloader.format_uid(device_uid)
-            debug(0, "Device UID: %s" % device_uid_string)
+            print("Verification FAILED")
+            print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
+            for i in range(0, len(binary_data)):
+                if binary_data[i] != read_data[i]:
+                    print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
 
-            flash_size = bootloader.get_flash_size(family)
-            debug(0, "Flash size: %d KiB" % flash_size)
+    if not configuration['write'] and configuration['read']:
+        read_data = bootloader.read_memory_data(configuration['address'], configuration['length'])
+        with open(data_file, 'wb') as out_file:
+            out_file.write(read_data)
 
-        binary_data = None
-        # if there's a non-named argument left, that's a file name
-        data_file = args[0] if args else None
+    if configuration['go_address'] != -1:
+        bootloader.go(configuration['go_address'])
 
-        if configuration['write'] or configuration['verify']:
-            with open(data_file, 'rb') as read_file:
-                binary_data = bytearray(read_file.read())
 
-        if configuration['unprotect']:
-            try:
-                bootloader.readout_unprotect()
-            except CommandException:
-                # may be caused by readout protection
-                debug(0, "Erase failed -- probably due to readout protection")
-                debug(0, "Quit")
-                bootloader.reset_from_flash()
-                sys.exit(1)
-
-        if configuration['erase']:
-            try:
-                bootloader.erase_memory()
-            except CommandException:
-                # may be caused by readout protection
-                debug(
-                    0,
-                    "Erase failed -- probably due to readout protection\n"
-                    "consider using the -u (unprotect) option."
-                )
-                bootloader.reset_from_flash()
-                sys.exit(1)
-
-        if configuration['write']:
-            bootloader.write_memory_data(configuration['address'], binary_data)
-
-        if configuration['verify']:
-            read_data = bootloader.read_memory_data(configuration['address'], len(binary_data))
-            if binary_data == read_data:
-                print("Verification OK")
-            else:
-                print("Verification FAILED")
-                print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
-                for i in range(0, len(binary_data)):
-                    if binary_data[i] != read_data[i]:
-                        print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
-
-        if not configuration['write'] and configuration['read']:
-            read_data = bootloader.read_memory_data(configuration['address'], configuration['length'])
-            with open(data_file, 'wb') as out_file:
-                out_file.write(read_data)
-
-        if configuration['go_address'] != -1:
-            bootloader.go(configuration['go_address'])
-
+if __name__ == "__main__":
+    config = _parse_arguments()
+    chip = _connect(config)
+    try:
+        _perform_commands(chip, config)
     finally:
-        bootloader.reset_from_flash()
+        chip.reset_from_flash()
