@@ -1,7 +1,8 @@
 STM32Loader
 ===========
 
-Python script which will talk to the STM32 bootloader to upload and download firmware.
+Python script to upload or download firmware to / from
+ST Microelectronics STM32 microcontrollers over UART.
 
 Also supports ST BlueNRG devices, and the SweetPeas bootloader
 for Wiznet W7500.
@@ -98,3 +99,13 @@ If either RTS or DTR are not available on your serial adapter, you'll have to
 manually push buttons or work with jumpers.
 When given a choice, set BOOT0 manually high and drive reset through the serial
 adepter (it needs to toggle, whereas BOOT0 does not).
+
+
+Not currently supported
+-----------------------
+
+* Extended erase with specific sectors
+* Command-line argument for readout protection
+* Command-line argument for write protection/unprotection
+* STM8 devices (ST UM0560)
+* Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
