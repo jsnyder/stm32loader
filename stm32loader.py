@@ -52,6 +52,12 @@ CHIP_IDS = {
     # see ST AN4872
     # requires parity None
     0x11103: "BlueNRG",
+
+    # other
+
+    # Cortex-M0 MCU with hardware TCP/IP and MAC
+    # (SweetPeas custom bootloader)
+    0x801: "Wiznet W7500",
 }
 
 

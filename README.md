@@ -3,6 +3,9 @@ STM32Loader
 
 Python script which will talk to the STM32 bootloader to upload and download firmware.
 
+Also supports ST BlueNRG devices, and the SweetPeas bootloader
+for Wiznet W7500.
+
 Compatible with Python version 2.6 to 2.7, 3.2 to 3.6.
 
 
@@ -56,3 +59,6 @@ Inspiration for features from:
 
 * ST BlueNRG chip support
   https://github.com/lchish/stm32loader
+
+* Wiznet W7500 chip / SeetPeas custom bootloader support
+  https://github.com/Sweet-Peas/WiznetLoader

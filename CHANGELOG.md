@@ -2,6 +2,8 @@
 # v0.3.0
 * Add version number.
 * Add this changelog.
+* Support ST BlueNRG devices (configurable parity).
+* Add Wiznet W7500 / SweetPeas bootloader chip ID.
 
 # 2018-05
 * Make RTS/DTR (boot0/reset) configurable (polarity, swap).
