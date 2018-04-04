@@ -352,8 +352,13 @@ class Stm32Bootloader:
         time.sleep(0.5)
 
     def _enable_reset(self, enable=True):
-        # active low unless otherwise specified
-        level = 0 if enable else 1
+        # reset on the MCU is active low (0 Volt puts the MCU in reset)
+        # but RS-232 DTR is active low by itself so it inverts this
+        # (writing logical 1 outputs a low voltage)
+        level = 1 if enable else 0
+
+        # setting -R (reset active high) ensures that the MCU
+        # gets 3.3 Volt to enable reset
         if self._reset_active_high:
             level = 1 - level
 
@@ -365,7 +370,9 @@ class Stm32Bootloader:
     def _enable_boot0(self, enable=True):
         # active low unless otherwise specified
         level = 0 if enable else 1
+
         if self._boot0_active_high:
+            # enabled by argument -B (boot0 active high)
             level = 1 - level
 
         if self._swap_RTS_DTR:
