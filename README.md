@@ -13,7 +13,7 @@ Usage
 -----
 
 ```
-./stm32loader.py [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [file.bin]
+./stm32loader.py [-hqVewvr] [-l length] [-p port] [-b baud] [-a addr] [-f family] [file.bin]
     -h          This help
     -q          Quiet mode
     -V          Verbose mode
@@ -30,6 +30,7 @@ Usage
     -b baud     Baud speed (default: 115200)
     -a address  Target address
     -g address  Address to start running at (0x08000000, usually)
+    -f family   Device family to read out device UID and flash size; e.g F1 for STM32F1xx
 ```
 
 
