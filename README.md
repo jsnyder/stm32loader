@@ -63,3 +63,27 @@ Inspiration for features from:
 
 * Wiznet W7500 chip / SeetPeas custom bootloader support
   https://github.com/Sweet-Peas/WiznetLoader
+
+
+Electrically
+------------
+
+The below assumes you care connecting an STM32F10x.
+For other chips, the serial pins and/or the BOOT0 / BOOT1 values
+may differ.
+
+Make the following connections:
+
+- Serial adapter GND to MCU GND.
+- Serial adapter power to MCU power or vice versa (either 3.3 or 5 Volt).
+- Note if you're using 5 Volt signaling or 3V3 on the serial adapter.
+- Serial TX to MCU RX (PA10).
+- Serial RX to MCU TX (PA9).
+- Serial DTR to MCU RESET.
+- Serial RTS to MCU BOOT0 (or BOOT0 to 3.3V).
+- MCU BOOT1 to GND.
+
+If either RTS or DTR are not available on your serial adapter, you'll have to
+manually push buttons or work with jumpers.
+When given a choice, set BOOT0 manually high and drive reset through the serial
+adepter (it needs to toggle, whereas BOOT0 does not).
