@@ -42,8 +42,13 @@ This will pre-erase flash, write `somefile.bin` to the flash on the device, and 
 Acknowledgement
 ---------------
 
-Original Version by: Ivan A-R <ivan@tuxotronic.org>.
+Original Version by Ivan A-R (tuxotronic.org).
+Contributions by Domen Puncer, James Snyder, Floris Lambrechts.
 
-Inspiration for the configurable RTS/DTR and polarity feature:
-hhttps://github.com/pazzarpj/stm32loader .
+Inspiration for features from:
 
+* Configurable RTS/DTR and polarity, extended erase with sectors:
+  https://github.com/pazzarpj/stm32loader
+
+* Correct checksum calculation for sector erase:
+  https://github.com/jsnyder/stm32loader/pull/4
