@@ -154,7 +154,8 @@ class Stm32Bootloader:
                 "Is the device connected and powered correctly?\n"
                 "Please use the -p option to select the correct serial port. Examples:\n"
                 "  -p COM3\n"
-                "  -p /dev/ttyS0"
+                "  -p /dev/ttyS0\n"
+                "  -p /dev/ttyUSB0\n"
                 "  -p /dev/tty.usbserial-ftCYPMYJ\n"
             )
             exit(1)
