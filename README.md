@@ -53,3 +53,6 @@ Inspiration for features from:
 
 * Correct checksum calculation for sector erase:
   https://github.com/jsnyder/stm32loader/pull/4
+
+* ST BlueNRG chip support
+  https://github.com/lchish/stm32loader
