@@ -39,15 +39,21 @@ VERBOSITY = 20
 
 CHIP_IDS = {
     # see ST AN2606
-    0x412: "STM32 Low-density",
-    0x410: "STM32 Medium-density",
-    0x414: "STM32 High-density",
-    0x420: "STM32 Medium-density value line",
-    0x428: "STM32 High-density value line",
-    0x430: "STM32 XL-density",
-    0x416: "STM32 Medium-density ultralow power line",
-    0x411: "STM32F2xx",
-    0x413: "STM32F4xx",
+    # 16 to 32 KiB
+    0x412: "STM32F10x Low-density",
+    # 64 to 128 KiB
+    0x410: "STM32F10x Medium-density",
+    0x420: "STM32F10x Medium-density value line",
+    # 256 to 512 KiB (5128 Kbyte is probably a typo?)
+    0x414: "STM32F10x High-density",
+    0x428: "STM32F10x High-density value line",
+    # 768 to 1024 KiB
+    0x430: "STM3210xx XL-density",
+    # flash size to be looked up
+    0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
+    0x411: "STM32F2xxx",
+    0x413: "STM32F40xxx/41xxx",
+    0x419: "STM3242xxx/43xxx",
 
     # see ST AN4872
     # requires parity None
@@ -99,6 +105,24 @@ class Stm32Bootloader:
         even=serial.PARITY_EVEN,
         none=serial.PARITY_NONE,
     )
+
+    UID_ADDRESS = {
+        # ST RM0008 section 30.1 Unique device ID register
+        # F101, F102, F103, F105, F107
+        'F1': 0x1FFFF7E8,
+        # ST RM0090 section 39.1 Unique device ID register
+        # F405/415, F407/417, F427/437, F429/439
+        'F4': 0x1FFFF7A10,
+    }
+
+    FLASH_SIZE_ADDRESS = {
+        # ST RM0008 section 30.2 Memory size registers
+        # F101, F102, F103, F105, F107
+        'F1': 0x1FFFF7E0,
+        # ST RM0090 section 39.2 Unique device ID register
+        # F405/415, F407/417, F427/437, F429/439
+        'F4': 0x1FFF7A22,
+    }
 
     extended_erase = False
 
@@ -189,6 +213,24 @@ class Stm32Bootloader:
         self._wait_for_ack("0x02 end")
         _device_id = reduce(lambda x, y: x * 0x100 + y, id_data)
         return _device_id
+
+    def get_flash_size(self, device_family):
+        flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
+        flash_size_bytes = self.read_memory(flash_size_address, 2)
+        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * 256
+        return flash_size
+
+    def get_uid(self, device_id):
+        uid_address = self.UID_ADDRESS[device_id]
+        uid = self.read_memory(uid_address, 12)
+        return uid
+
+    @staticmethod
+    def format_uid(uid):
+        UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
+        swapped_data = [[uid[b] for b in part] for part in UID_SWAP]
+        uid_string = '-'.join(''.join(format(b, '02X') for b in part) for part in swapped_data)
+        return uid_string
 
     def read_memory(self, address, length):
         assert(length <= 256)
@@ -405,7 +447,7 @@ class Stm32Bootloader:
 
 
 def usage():
-    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [file.bin]
+    help_text = """Usage: %s [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
     -h          This help
     -q          Quiet mode
     -V          Verbose mode
@@ -422,6 +464,7 @@ def usage():
     -b baud     Baud speed (default: 115200)
     -a address  Target address
     -g address  Address to start running at (0x08000000, usually)
+    -f family   Device family to read out device UID and flash size; e.g F1 for STM32F1xx
 
     ./stm32loader.py -e -w -v example/main.bin
     """
@@ -444,11 +487,12 @@ if __name__ == "__main__":
         'swap_rts_dtr': False,
         'reset_active_high': False,
         'boot0_active_high': False,
+        'family': None,
     }
 
     try:
         # parse command-line arguments using getopt
-        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBP:p:b:a:l:g:")
+        opts, args = getopt.getopt(sys.argv[1:], "hqVewvrsRBP:f:p:b:a:l:g:")
     except getopt.GetoptError as err:
         # print help information and exit:
         # this print something like "option -a not recognized"
@@ -493,6 +537,8 @@ if __name__ == "__main__":
             configuration['go_address'] = eval(value)
         elif option == '-l':
             configuration['length'] = eval(value)
+        elif option == '-f':
+            configuration['family'] = value
         else:
             assert False, "unhandled option %s" % option
 
@@ -514,9 +560,22 @@ if __name__ == "__main__":
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
 
         boot_version = bootloader.get()
-        debug(0, "Bootloader version %X" % boot_version)
+        high = (boot_version & 0xF0) >> 4
+        low = boot_version & 0x0F
+        debug(0, "Bootloader version: V%d.%d" % (high, low))
         device_id = bootloader.get_id()
-        debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+        debug(0, "Chip ID: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+
+        family = configuration['family']
+        if not family:
+            debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
+        else:
+            device_uid = bootloader.get_uid(family)
+            device_uid_string = bootloader.format_uid(device_uid)
+            debug(0, "Device UID: %s" % device_uid_string)
+
+            flash_size = bootloader.get_flash_size(family)
+            debug(0, "Flash size: %d KiB" % flash_size)
 
         binary_data = None
         # if there's a non-named argument left, that's a file name
