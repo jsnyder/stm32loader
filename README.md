@@ -16,6 +16,7 @@ Usage
 ```
 ./stm32loader.py [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
     -e          Erase (note: this is required on previously written memory)
+    -u          Readout unprotect
     -w          Write file content to flash
     -v          Verify flash content versus local file (recommended)
     -r          Read from flash and store in local file
@@ -66,6 +67,9 @@ Inspiration for features from:
 
 * Configurable RTS/DTR and polarity, extended erase with sectors:
   https://github.com/pazzarpj/stm32loader
+  
+* Memory unprotect
+  https://github.com/3drobotics/stm32loader
 
 * Correct checksum calculation for sector erase:
   https://github.com/jsnyder/stm32loader/pull/4
