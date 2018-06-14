@@ -84,7 +84,7 @@ Inspiration for features from:
 Electrically
 ------------
 
-The below assumes you care connecting an STM32F10x.
+The below assumes you are connecting an STM32F10x.
 For other chips, the serial pins and/or the BOOT0 / BOOT1 values
 may differ.
 
