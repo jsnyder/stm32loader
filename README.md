@@ -78,7 +78,7 @@ Inspiration for features from:
 * ST BlueNRG chip support
   https://github.com/lchish/stm32loader
 
-* Wiznet W7500 chip / SeetPeas custom bootloader support
+* Wiznet W7500 chip / SweetPeas custom bootloader support
   https://github.com/Sweet-Peas/WiznetLoader
 
 
