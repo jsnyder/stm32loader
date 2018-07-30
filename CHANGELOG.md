@@ -1,4 +1,9 @@
 
+v0.3.1
+======
+* Make stm32loader installable and importable as a package.
+* Make write_memory faster (by Atokulus, see #1)
+
 v0.3.0
 =======
 * Add version number.
