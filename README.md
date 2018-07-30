@@ -61,7 +61,8 @@ Acknowledgement
 ---------------
 
 Original Version by Ivan A-R (tuxotronic.org).
-Contributions by Domen Puncer, James Snyder, Floris Lambrechts.
+Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
+Atokulus.
 
 Inspiration for features from:
 
