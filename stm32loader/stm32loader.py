@@ -32,9 +32,6 @@ import serial
 import time
 
 
-VERSION = (0, 3, 0)
-__version__ = '.'.join(map(str, VERSION))
-
 VERBOSITY = 5
 
 CHIP_IDS = {
