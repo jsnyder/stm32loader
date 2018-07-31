@@ -112,7 +112,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
-        'Environment:: Console',
         'Natural Language :: English',
         'Operating System :: OS Independent',
     ],
