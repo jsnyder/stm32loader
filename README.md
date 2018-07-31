@@ -7,7 +7,7 @@ ST Microelectronics STM32 microcontrollers over UART.
 Also supports ST BlueNRG devices, and the SweetPeas bootloader
 for Wiznet W7500.
 
-Compatible with Python version 2.6 to 2.7, 3.2 to 3.6.
+Compatible with Python version 3.2 to 3.7 or 2.7.
 
 
 Usage
