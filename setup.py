@@ -19,6 +19,10 @@ EMAIL = 'florisla@gmail.com'
 AUTHOR = 'Floris Lambrechts'
 REQUIRES_PYTHON = '>=2.6.0'
 VERSION = None
+PROJECT_URLS = {
+    "Bug Tracker": "https://github.com/florisla/stm32loader/issues",
+    "Source Code": "https://github.com/florisla/stm32loader",
+}
 
 REQUIRED = [
     'pyserial',
@@ -91,6 +95,7 @@ setup(
     description=DESCRIPTION,
     long_description=long_description,
     long_description_content_type='text/markdown',
+    project_urls=PROJECT_URLS,
     author=AUTHOR,
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
