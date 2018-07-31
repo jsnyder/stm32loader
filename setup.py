@@ -17,7 +17,7 @@ DESCRIPTION = 'Flash firmware to STM32 microcontrollers using Python.'
 URL = 'https://github.com/florisla/stm32loader'
 EMAIL = 'florisla@gmail.com'
 AUTHOR = 'Floris Lambrechts'
-REQUIRES_PYTHON = '>=2.6.0'
+REQUIRES_PYTHON = '>=2.7.0'
 VERSION = None
 PROJECT_URLS = {
     "Bug Tracker": "https://github.com/florisla/stm32loader/issues",
@@ -28,8 +28,9 @@ REQUIRED = [
     'pyserial',
 ]
 
-EXTRAS = {
-}
+EXTRAS = dict(
+    dev=['setuptools', 'wheel', 'twine'],
+)
 
 here = os.path.abspath(os.path.dirname(__file__))
 
