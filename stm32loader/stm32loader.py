@@ -645,7 +645,7 @@ class Stm32Loader:
             debug(0, "Flash size: %d KiB" % flash_size)
 
 
-if __name__ == "__main__":
+def main():
     loader = Stm32Loader()
     loader.parse_arguments(sys.argv[1:])
     loader.connect()
@@ -654,3 +654,7 @@ if __name__ == "__main__":
         loader.perform_commands()
     finally:
         loader.reset()
+
+
+if __name__ == "__main__":
+    main()
