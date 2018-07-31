@@ -1,8 +1,14 @@
 
+v0.3.2
+======
+* Publish on Python Package Index.
+* Make stm32loader executable as a module.
+* Expose stm32loader as a console script (stm32loader.exe on Windows).
+
 v0.3.1
 ======
 * Make stm32loader installable and importable as a package.
-* Make write_memory faster (by Atokulus, see #1)
+* Make write_memory faster (by Atokulus, see #1).
 
 v0.3.0
 =======
