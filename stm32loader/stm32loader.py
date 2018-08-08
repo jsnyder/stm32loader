@@ -268,7 +268,7 @@ class Stm32Bootloader:
         checksum = 0xFF
         for c in data:
             checksum = checksum ^ c
-        self.serial.write(bytearray([data]))
+        self.serial.write(bytearray(data))
         self.serial.write(bytearray([checksum]))
         self._wait_for_ack("0x31 programming failed")
         debug(10, "    Write memory done")
