@@ -51,6 +51,8 @@ CHIP_IDS = {
     0x411: "STM32F2xxx",
     0x413: "STM32F40xxx/41xxx",
     0x419: "STM3242xxx/43xxx",
+    0x449: "STM32F74xxx/75xxx",
+    0x451: "STM32F76xxx/77xxx",
 
     # see ST AN4872
     # requires parity None
@@ -112,15 +114,19 @@ class Stm32Bootloader:
         # ST RM0090 section 39.1 Unique device ID register
         # F405/415, F407/417, F427/437, F429/439
         'F4': 0x1FFFF7A10,
+        # ST RM0385 section 41.2 Unique device ID register
+        'F7': 0x1FF0F420,
     }
 
     FLASH_SIZE_ADDRESS = {
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
         'F1': 0x1FFFF7E0,
-        # ST RM0090 section 39.2 Unique device ID register
+        # ST RM0090 section 39.2 Flash size
         # F405/415, F407/417, F427/437, F429/439
         'F4': 0x1FFF7A22,
+        # ST RM0385 section 41.2 Flash size
+        'F7': 0x1FF0F442,
     }
 
     extended_erase = False
