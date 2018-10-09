@@ -35,7 +35,7 @@ import time
 VERBOSITY = 5
 
 CHIP_IDS = {
-    # see ST AN2606
+    # see ST AN2606 Table 116 Bootloader device-dependent parameters
     # 16 to 32 KiB
     0x412: "STM32F10x Low-density",
     # 64 to 128 KiB
