@@ -1,4 +1,12 @@
 
+vnext
+=====
+* Add support for STM32F7 mcus. By sam-bristow.
+
+v0.3.3
+======
+* Bugfix: write data, not [data]. By Atokulus.
+
 v0.3.2
 ======
 * Publish on Python Package Index.
