@@ -261,17 +261,27 @@ class Stm32Bootloader:
         self._wait_for_ack("0x21 go failed")
 
     def write_memory(self, address, data):
-        assert(len(data) <= 256)
+        nr_of_bytes = len(data)
+        assert nr_of_bytes <= 256
+
         if not self.command(self.Command.WRITE_MEMORY):
             raise CommandException("Write memory (0x31) failed")
 
         debug(10, "*** Write memory command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x31 address failed")
-        nr_of_bytes = (len(data) - 1) & 0xFF
-        debug(10, "    %s bytes to write" % [nr_of_bytes + 1])
-        self.serial.write(bytearray([nr_of_bytes]))
-        checksum = 0xFF
+
+        # pad data length to multiple of 4 bytes
+        if nr_of_bytes % 4 != 0:
+            padding_bytes = 4 - (nr_of_bytes % 4)
+            nr_of_bytes += padding_bytes
+            # append value 0xFF: flash memory value after erase
+            data = bytearray(data)
+            data.extend([0xFF] * padding_bytes)
+
+        debug(10, "    %s bytes to write" % [nr_of_bytes])
+        self.serial.write(bytearray([nr_of_bytes - 1]))
+        checksum = nr_of_bytes - 1
         for c in data:
             checksum = checksum ^ c
         self.serial.write(bytearray(data))
@@ -361,9 +371,9 @@ class Stm32Bootloader:
             data = data + self.read_memory(address, 256)
             address = address + 256
             length = length - 256
-        else:
-            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-        data = data + self.read_memory(address, length)
+        if length:
+            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': length})
+            data = data + self.read_memory(address, length)
         return data
 
     def write_memory_data(self, address, data):
@@ -375,9 +385,9 @@ class Stm32Bootloader:
             offset += 256
             address += 256
             length -= 256
-        else:
-            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-        self.write_memory(address, data[offset:offset + length] + (b'\xff' * (256 - length)))
+        if length:
+            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': length})
+            self.write_memory(address, data[offset:offset + length])
 
     def _global_erase(self):
         # global erase: n=255, see ST AN3155
