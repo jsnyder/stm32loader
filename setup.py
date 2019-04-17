@@ -28,9 +28,9 @@ REQUIRED = [
     'pyserial',
 ]
 
-EXTRAS = dict(
-    dev=['setuptools', 'wheel', 'twine'],
-)
+EXTRAS = {
+    "dev": ['setuptools', 'wheel', 'twine', 'pylint', 'flake8', 'flake8-isort', 'black'],
+}
 
 here = os.path.abspath(os.path.dirname(__file__))
 
