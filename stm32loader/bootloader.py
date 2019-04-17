@@ -209,6 +209,7 @@ class Stm32Bootloader:
     }
 
     extended_erase = False
+    PAGE_SIZE = 256  # bytes
 
     def __init__(self, connection, verbosity=5, show_progress=None):
         """
@@ -314,7 +315,7 @@ class Stm32Bootloader:
         """Return the MCU's flash size in bytes."""
         flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
-        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * 256
+        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * self.PAGE_SIZE
         return flash_size
 
     def get_uid(self, device_id):
@@ -336,7 +337,8 @@ class Stm32Bootloader:
 
         Supports maximum 256 bytes.
         """
-        assert length <= 256
+        if length > self.PAGE_SIZE:
+            raise DataLengthError("Can not read more than 256 bytes at once.")
         self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
         nr_of_bytes = (length - 1) & 0xFF
@@ -359,7 +361,8 @@ class Stm32Bootloader:
         nr_of_bytes = len(data)
         if nr_of_bytes == 0:
             return
-        assert nr_of_bytes <= 256
+        if nr_of_bytes > self.PAGE_SIZE:
+            raise DataLengthError("Can not write more than 256 bytes at once.")
         self.command(self.Command.WRITE_MEMORY, "Write memory")
         self.write_and_ack("0x31 address failed", self._encode_address(address))
 
@@ -451,11 +454,11 @@ class Stm32Bootloader:
         Length may be more than 256 bytes.
         """
         data = bytearray()
-        page_count = int(math.ceil(length / 256.0))
+        page_count = int(math.ceil(length / float(self.PAGE_SIZE)))
         self.debug(5, "Read %d pages at address 0x%X..." % (page_count, address))
         with self.show_progress("Reading", maximum=page_count) as progress_bar:
             while length:
-                read_length = min(length, 256)
+                read_length = min(length, self.PAGE_SIZE)
                 self.debug(
                     10,
                     "Read %(len)d bytes at 0x%(address)X"
@@ -474,13 +477,13 @@ class Stm32Bootloader:
         Data length may be more than 256 bytes.
         """
         length = len(data)
-        page_count = int(math.ceil(length / 256.0))
+        page_count = int(math.ceil(length / float(self.PAGE_SIZE)))
         offset = 0
         self.debug(5, "Write %d pages at address 0x%X..." % (page_count, address))
 
         with self.show_progress("Writing", maximum=page_count) as progress_bar:
             while length:
-                write_length = min(length, 256)
+                write_length = min(length, self.PAGE_SIZE)
                 self.debug(
                     10,
                     "Write %(len)d bytes at 0x%(address)X"

@@ -72,6 +72,11 @@ def test_write_and_ack_with_nack_response_raises_commandexception(bootloader):
         bootloader.write_and_ack("custom message", 0x00)
 
 
+def test_write_memory_with_length_higher_than_256_raises_data_length_error(bootloader):
+    with pytest.raises(Stm32.DataLengthError, match=r"Can not write more than 256 bytes at once\."):
+        bootloader.write_memory(0, [1] * 257)
+
+
 def test_write_memory_with_zero_bytes_does_not_send_anything(bootloader, connection):
     bootloader.write_memory(0, b"")
     assert not connection.method_calls
@@ -88,6 +93,11 @@ def test_write_memory_sends_correct_number_of_bytes(bootloader, write):
     # length byte, 4 data bytes, checksum byte
     byte_count = 2 + 4 + 1 + 1 + 4 + 1
     assert len(write.written_data) == byte_count
+
+
+def test_read_memory_with_length_higher_than_256_raises_data_length_error(bootloader):
+    with pytest.raises(Stm32.DataLengthError, match=r"Can not read more than 256 bytes at once\."):
+        bootloader.read_memory(0, length=257)
 
 
 def test_read_memory_sends_address_with_checksum(bootloader, write):
