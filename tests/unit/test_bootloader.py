@@ -2,7 +2,8 @@
 
 import pytest
 
-from stm32loader.bootloader import CommandException, Stm32Bootloader
+from stm32loader import bootloader as Stm32
+from stm32loader.bootloader import Stm32Bootloader
 
 try:
     from unittest.mock import MagicMock
@@ -67,7 +68,7 @@ def test_write_with_integers_sends_integers_as_bytes(bootloader, write):
 def test_write_and_ack_with_nack_response_raises_commandexception(bootloader):
     bootloader.connection.read = MagicMock()
     bootloader.connection.read.return_value = [Stm32Bootloader.Reply.NACK]
-    with pytest.raises(CommandException, match="custom message"):
+    with pytest.raises(Stm32.CommandError, match="custom message"):
         bootloader.write_and_ack("custom message", 0x00)
 
 

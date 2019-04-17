@@ -26,7 +26,7 @@ from __future__ import print_function
 import getopt
 import sys
 
-from .bootloader import CHIP_IDS, CommandException, ShowProgress, Stm32Bootloader
+from . import bootloader
 from .rs232 import SerialConnection
 
 DEFAULT_VERBOSITY = 5
@@ -129,14 +129,17 @@ class Stm32Loader:
 
         show_progress = self._get_progress_bar(self.configuration["hide_progress_bar"])
 
-        self.stm32 = Stm32Bootloader(
+        self.stm32 = bootloader.Stm32Bootloader(
             serial_connection, verbosity=self.verbosity, show_progress=show_progress
         )
 
         try:
             self.stm32.reset_from_system_memory()
-        except CommandException:
-            print("Can't init into bootloader. Ensure that BOOT0 is enabled and reset device.")
+        except bootloader.CommandError:
+            print(
+                "Can't init into bootloader. Ensure that BOOT0 is enabled and reset the device.",
+                file=sys.stderr,
+            )
             self.stm32.reset_from_flash()
             sys.exit(1)
 
@@ -150,7 +153,7 @@ class Stm32Loader:
         if self.configuration["unprotect"]:
             try:
                 self.stm32.readout_unprotect()
-            except CommandException:
+            except bootloader.CommandError:
                 # may be caused by readout protection
                 self.debug(0, "Erase failed -- probably due to readout protection")
                 self.debug(0, "Quit")
@@ -159,7 +162,7 @@ class Stm32Loader:
         if self.configuration["erase"]:
             try:
                 self.stm32.erase_memory()
-            except CommandException:
+            except bootloader.CommandError:
                 # may be caused by readout protection
                 self.debug(
                     0,
@@ -236,7 +239,9 @@ class Stm32Loader:
         boot_version = self.stm32.get()
         self.debug(0, "Bootloader version %X" % boot_version)
         device_id = self.stm32.get_id()
-        self.debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+        self.debug(
+            0, "Chip id: 0x%x (%s)" % (device_id, bootloader.CHIP_IDS.get(device_id, "Unknown"))
+        )
         family = self.configuration["family"]
         if not family:
             self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
@@ -289,7 +294,7 @@ class Stm32Loader:
         if not desired_progress_bar:
             return None
 
-        return ShowProgress(desired_progress_bar)
+        return bootloader.ShowProgress(desired_progress_bar)
 
 
 def main(*args, **kwargs):

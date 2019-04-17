@@ -58,8 +58,24 @@ CHIP_IDS = {
 }
 
 
-class CommandException(IOError):
-    """Error: a command in the STM32 native bootloader failed."""
+class Stm32LoaderError(Exception):
+    """Generic exception type for errors occurring in stm32loader."""
+
+
+class CommandError(Stm32LoaderError, IOError):
+    """Exception: a command in the STM32 native bootloader failed."""
+
+
+class PageIndexError(Stm32LoaderError, ValueError):
+    """Exception: invalid page index given."""
+
+
+class DataLengthError(Stm32LoaderError, ValueError):
+    """Exception: invalid data length given."""
+
+
+class DataMismatchError(Stm32LoaderError):
+    """Exception: data comparison failed."""
 
 
 class ShowProgress:
@@ -248,12 +264,12 @@ class Stm32Bootloader:
         """
         Send the given command to the MCU.
 
-        Raise CommandException if there's no ACK replied.
+        Raise CommandError if there's no ACK replied.
         """
         self.debug(10, "*** Command: %s" % description)
         ack_received = self.write_and_ack("Command", command, command ^ 0xFF)
         if not ack_received:
-            raise CommandException("%s (%s) failed: no ack" % (description, command))
+            raise CommandError("%s (%s) failed: no ack" % (description, command))
 
     def get(self):
         """Return the bootloader version and remember supported commands."""
