@@ -118,6 +118,8 @@ Not currently supported
 
 Future work
 -----------
+* Allow to set default serial port through environment variable
 * Use proper logging instead of print statements
 * Use Travis or Azure pipelines for CI
 * Support PyPy, PyPy3
+* Drop Python2 support; start using intenum for commands and replies
