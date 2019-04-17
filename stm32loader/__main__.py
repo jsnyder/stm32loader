@@ -1,4 +1,3 @@
-
 """
 Execute stm32loader as a module.
 
@@ -10,7 +9,7 @@ from .stm32loader import main as stm32loader_main
 
 def main():
     """
-    Separate main() method, different from stm32loader.main.
+    Separate main method, different from stm32loader.main.
 
     This way it it can be used as an entry point for a console script.
     :return None:

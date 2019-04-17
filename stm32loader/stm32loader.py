@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
 # vim: sw=4:ts=4:si:et:enc=utf-8
 
@@ -22,17 +21,19 @@
 # along with stm32loader; see the file COPYING3.  If not see
 # <http://www.gnu.org/licenses/>.
 
+"""Flash firmware to STM32 microcontrollers over an RS-232 serial connection."""
+
 
 from __future__ import print_function
 
-from functools import reduce
-import sys
 import getopt
-import serial
+import sys
 import time
+from functools import reduce
 
+import serial
 
-VERBOSITY = 5
+DEFAULT_VERBOSITY = 5
 
 CHIP_IDS = {
     # see ST AN2606 Table 116 Bootloader device-dependent parameters
@@ -53,31 +54,33 @@ CHIP_IDS = {
     0x419: "STM3242xxx/43xxx",
     0x449: "STM32F74xxx/75xxx",
     0x451: "STM32F76xxx/77xxx",
-
     # see ST AN4872
     # requires parity None
     0x11103: "BlueNRG",
-
     # other
-
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
 }
 
 
-def debug(level, message):
-    if VERBOSITY >= level:
-        print(message, file=sys.stderr)
-
-
 class CommandException(Exception):
+    """Error: a command in the STM32 native bootloader failed."""
+
     pass
 
 
 class Stm32Bootloader:
+    """Talk to the STM32 native bootloader."""
+
+    # pylint: disable=too-many-public-methods
 
     class Command:
+        """STM32 native bootloader command values."""
+
+        # pylint: disable=too-few-public-methods
+        # FIXME turn into intenum
+
         # See ST AN3155, AN4872
         GET = 0x00
         GET_VERSION = 0x01
@@ -98,46 +101,62 @@ class Stm32Bootloader:
         SYNCHRONIZE = 0x7F
 
     class Reply:
+        """STM32 native bootloader reply status codes."""
+
+        # pylint: disable=too-few-public-methods
+        # FIXME turn into intenum
+
         # See ST AN3155, AN4872
         ACK = 0x79
         NACK = 0x1F
 
-    PARITY = dict(
-        even=serial.PARITY_EVEN,
-        none=serial.PARITY_NONE,
-    )
+    PARITY = {"even": serial.PARITY_EVEN, "none": serial.PARITY_NONE}
 
     UID_ADDRESS = {
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
-        'F1': 0x1FFFF7E8,
+        "F1": 0x1FFFF7E8,
         # ST RM0090 section 39.1 Unique device ID register
         # F405/415, F407/417, F427/437, F429/439
-        'F4': 0x1FFFF7A10,
+        "F4": 0x1FFFF7A10,
         # ST RM0385 section 41.2 Unique device ID register
-        'F7': 0x1FF0F420,
+        "F7": 0x1FF0F420,
     }
+
+    UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
 
     FLASH_SIZE_ADDRESS = {
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
-        'F1': 0x1FFFF7E0,
+        "F1": 0x1FFFF7E0,
         # ST RM0090 section 39.2 Flash size
         # F405/415, F407/417, F427/437, F429/439
-        'F4': 0x1FFF7A22,
+        "F4": 0x1FFF7A22,
         # ST RM0385 section 41.2 Flash size
-        'F7': 0x1FF0F442,
+        "F7": 0x1FF0F442,
     }
 
     extended_erase = False
 
-    def __init__(self, swap_rts_dtr=False, reset_active_high=False, boot0_active_high=False):
+    def __init__(
+        self,
+        swap_rts_dtr=False,
+        reset_active_high=False,
+        boot0_active_high=False,
+        verbosity=DEFAULT_VERBOSITY,
+    ):
+        """
+        Construct the Stm32Bootloader object.
+
+        Call setup_connection() before doing any real work.
+        """
         self.serial = None
-        self._swap_RTS_DTR = swap_rts_dtr
+        self._swap_rts_dtr = swap_rts_dtr
         self._reset_active_high = reset_active_high
         self._boot0_active_high = boot0_active_high
+        self.verbosity = verbosity
 
-    def open(self, serial_port, baud_rate=115200, parity=serial.PARITY_EVEN):
+    def setup_connection(self, serial_port, baud_rate=115_200, parity=serial.PARITY_EVEN):
         try:
             self.serial = serial.Serial(
                 port=serial_port,
@@ -165,6 +184,10 @@ class Stm32Bootloader:
             )
             exit(1)
 
+    def debug(self, level, message):
+        if self.verbosity >= level:
+            print(message, file=sys.stderr)
+
     def reset_from_system_memory(self):
         self._enable_boot0(True)
         self._reset()
@@ -187,14 +210,14 @@ class Stm32Bootloader:
     def get(self):
         if not self.command(self.Command.GET):
             raise CommandException("Get (0x00) failed")
-        debug(10, "*** Get command")
+        self.debug(10, "*** Get command")
         length = bytearray(self.serial.read())[0]
         version = bytearray(self.serial.read())[0]
-        debug(10, "    Bootloader version: " + hex(version))
+        self.debug(10, "    Bootloader version: " + hex(version))
         data = bytearray(self.serial.read(length))
         if self.Command.EXTENDED_ERASE in data:
             self.extended_erase = True
-        debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
+        self.debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
         self._wait_for_ack("0x00 end")
         return version
 
@@ -202,18 +225,18 @@ class Stm32Bootloader:
         if not self.command(self.Command.GET_VERSION):
             raise CommandException("GetVersion (0x01) failed")
 
-        debug(10, "*** GetVersion command")
+        self.debug(10, "*** GetVersion command")
         version = bytearray(self.serial.read())[0]
         self.serial.read(2)
         self._wait_for_ack("0x01 end")
-        debug(10, "    Bootloader version: " + hex(version))
+        self.debug(10, "    Bootloader version: " + hex(version))
         return version
 
     def get_id(self):
         if not self.command(self.Command.GET_ID):
             raise CommandException("GetID (0x02) failed")
 
-        debug(10, "*** GetID command")
+        self.debug(10, "*** GetID command")
         length = bytearray(self.serial.read())[0]
         id_data = bytearray(self.serial.read(length + 1))
         self._wait_for_ack("0x02 end")
@@ -233,17 +256,16 @@ class Stm32Bootloader:
 
     @staticmethod
     def format_uid(uid):
-        UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
-        swapped_data = [[uid[b] for b in part] for part in UID_SWAP]
-        uid_string = '-'.join(''.join(format(b, '02X') for b in part) for part in swapped_data)
+        swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
+        uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
         return uid_string
 
     def read_memory(self, address, length):
-        assert(length <= 256)
+        assert length <= 256
         if not self.command(self.Command.READ_MEMORY):
             raise CommandException("ReadMemory (0x11) failed")
 
-        debug(10, "*** ReadMemory command")
+        self.debug(10, "*** ReadMemory command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x11 address failed")
         nr_of_bytes = (length - 1) & 0xFF
@@ -253,10 +275,11 @@ class Stm32Bootloader:
         return bytearray(self.serial.read(length))
 
     def go(self, address):
+        # pylint: disable=invalid-name
         if not self.command(self.Command.GO):
             raise CommandException("Go (0x21) failed")
 
-        debug(10, "*** Go command")
+        self.debug(10, "*** Go command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x21 go failed")
 
@@ -267,7 +290,7 @@ class Stm32Bootloader:
         if not self.command(self.Command.WRITE_MEMORY):
             raise CommandException("Write memory (0x31) failed")
 
-        debug(10, "*** Write memory command")
+        self.debug(10, "*** Write memory command")
         self.serial.write(self._encode_address(address))
         self._wait_for_ack("0x31 address failed")
 
@@ -279,100 +302,105 @@ class Stm32Bootloader:
             data = bytearray(data)
             data.extend([0xFF] * padding_bytes)
 
-        debug(10, "    %s bytes to write" % [nr_of_bytes])
+        self.debug(10, "    %s bytes to write" % [nr_of_bytes])
         self.serial.write(bytearray([nr_of_bytes - 1]))
         checksum = nr_of_bytes - 1
-        for c in data:
-            checksum = checksum ^ c
+        for data_byte in data:
+            checksum = checksum ^ data_byte
         self.serial.write(bytearray(data))
         self.serial.write(bytearray([checksum]))
         self._wait_for_ack("0x31 programming failed")
-        debug(10, "    Write memory done")
+        self.debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
-            return self.extended_erase_memory()
+            self.extended_erase_memory()
+            return
 
         if not self.command(self.Command.ERASE):
             raise CommandException("Erase memory (0x43) failed")
 
-        debug(10, "*** Erase memory command")
+        self.debug(10, "*** Erase memory command")
 
         if sectors:
             self._page_erase(sectors)
         else:
             self._global_erase()
         self._wait_for_ack("0x43 erase failed")
-        debug(10, "    Erase memory done")
+        self.debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
         if not self.command(self.Command.EXTENDED_ERASE):
             raise CommandException("Extended Erase memory (0x44) failed")
 
-        debug(10, "*** Extended Erase memory command")
+        self.debug(10, "*** Extended Erase memory command")
         # Global mass erase and checksum byte
-        self.serial.write(b'\xFF')
-        self.serial.write(b'\xFF')
-        self.serial.write(b'\x00')
+        self.serial.write(b"\xFF")
+        self.serial.write(b"\xFF")
+        self.serial.write(b"\x00")
         previous_timeout_value = self.serial.timeout
         self.serial.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
         self._wait_for_ack("0x44 erasing failed")
         self.serial.timeout = previous_timeout_value
-        debug(10, "    Extended Erase memory done")
+        self.debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
         if not self.command(self.Command.WRITE_PROTECT):
             raise CommandException("Write Protect memory (0x63) failed")
 
-        debug(10, "*** Write protect command")
+        self.debug(10, "*** Write protect command")
         nr_of_pages = (len(pages) - 1) & 0xFF
         self.serial.write(bytearray([nr_of_pages]))
         checksum = 0xFF
-        for c in pages:
-            checksum = checksum ^ c
-            self.serial.write(bytearray([c]))
+        for page_index in pages:
+            checksum = checksum ^ page_index
+            self.serial.write(bytearray([page_index]))
         self.serial.write(bytearray([checksum]))
         self._wait_for_ack("0x63 write protect failed")
-        debug(10, "    Write protect done")
+        self.debug(10, "    Write protect done")
 
     def write_unprotect(self):
         if not self.command(self.Command.WRITE_UNPROTECT):
             raise CommandException("Write Unprotect (0x73) failed")
 
-        debug(10, "*** Write Unprotect command")
+        self.debug(10, "*** Write Unprotect command")
         self._wait_for_ack("0x73 write unprotect failed")
-        debug(10, "    Write Unprotect done")
+        self.debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
         if not self.command(self.Command.READOUT_PROTECT):
             raise CommandException("Readout protect (0x82) failed")
 
-        debug(10, "*** Readout protect command")
+        self.debug(10, "*** Readout protect command")
         self._wait_for_ack("0x82 readout protect failed")
-        debug(10, "    Read protect done")
+        self.debug(10, "    Read protect done")
 
     def readout_unprotect(self):
         if not self.command(self.Command.READOUT_UNPROTECT):
             raise CommandException("Readout unprotect (0x92) failed")
 
-        debug(10, "*** Readout Unprotect command")
+        self.debug(10, "*** Readout Unprotect command")
         self._wait_for_ack("0x92 readout unprotect failed")
-        debug(20, "    Mass erase -- this may take a while")
+        self.debug(20, "    Mass erase -- this may take a while")
         time.sleep(20)
-        debug(20, "    Unprotect / mass erase done")
-        debug(20, "    Reset after automatic chip reset due to readout unprotect")
+        self.debug(20, "    Unprotect / mass erase done")
+        self.debug(20, "    Reset after automatic chip reset due to readout unprotect")
         self.reset_from_system_memory()
 
     def read_memory_data(self, address, length):
         data = bytearray()
         while length > 256:
-            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
+            self.debug(
+                5, "Read %(len)d bytes at 0x%(address)X" % {"address": address, "len": 256}
+            )
             data = data + self.read_memory(address, 256)
             address = address + 256
             length = length - 256
         if length:
-            debug(5, "Read %(len)d bytes at 0x%(address)X" % {'address': address, 'len': length})
+            self.debug(
+                5, "Read %(len)d bytes at 0x%(address)X" % {"address": address, "len": length}
+            )
             data = data + self.read_memory(address, length)
         return data
 
@@ -380,19 +408,23 @@ class Stm32Bootloader:
         length = len(data)
         offset = 0
         while length > 256:
-            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': 256})
-            self.write_memory(address, data[offset:offset + 256])
+            self.debug(
+                5, "Write %(len)d bytes at 0x%(address)X" % {"address": address, "len": 256}
+            )
+            self.write_memory(address, data[offset : offset + 256])
             offset += 256
             address += 256
             length -= 256
         if length:
-            debug(5, "Write %(len)d bytes at 0x%(address)X" % {'address': address, 'len': length})
-            self.write_memory(address, data[offset:offset + length])
+            self.debug(
+                5, "Write %(len)d bytes at 0x%(address)X" % {"address": address, "len": length}
+            )
+            self.write_memory(address, data[offset : offset + length])
 
     def _global_erase(self):
         # global erase: n=255, see ST AN3155
-        self.serial.write(b'\xff')
-        self.serial.write(b'\x00')
+        self.serial.write(b"\xff")
+        self.serial.write(b"\x00")
 
     def _page_erase(self, pages):
         # page erase, see ST AN3155
@@ -421,7 +453,7 @@ class Stm32Bootloader:
         if self._reset_active_high:
             level = 1 - level
 
-        if self._swap_RTS_DTR:
+        if self._swap_rts_dtr:
             self.serial.setRTS(level)
         else:
             self.serial.setDTR(level)
@@ -434,7 +466,7 @@ class Stm32Bootloader:
             # enabled by argument -B (boot0 active high)
             level = 1 - level
 
-        if self._swap_RTS_DTR:
+        if self._swap_rts_dtr:
             self.serial.setDTR(level)
         else:
             self.serial.setRTS(level)
@@ -464,29 +496,36 @@ class Stm32Bootloader:
 
 
 class Stm32Loader:
+    """Main application: parse arguments and handle commands."""
 
     def __init__(self):
+        """Construct Stm32Loader object with default settings."""
         self.bootloader = None
         self.configuration = {
-            'port': '/dev/tty.usbserial-ftCYPMYJ',
-            'baud': 115200,
-            'parity': serial.PARITY_EVEN,
-            'family': None,
-            'address': 0x08000000,
-            'erase': False,
-            'unprotect': False,
-            'write': False,
-            'verify': False,
-            'read': False,
-            'go_address': -1,
-            'swap_rts_dtr': False,
-            'reset_active_high': False,
-            'boot0_active_high': False,
-            'data_file': None,
+            "port": "/dev/tty.usbserial-ftCYPMYJ",
+            "baud": 115_200,
+            "parity": serial.PARITY_EVEN,
+            "family": None,
+            "address": 0x08000000,
+            "erase": False,
+            "unprotect": False,
+            "write": False,
+            "verify": False,
+            "read": False,
+            "go_address": -1,
+            "swap_rts_dtr": False,
+            "reset_active_high": False,
+            "boot0_active_high": False,
+            "data_file": None,
         }
+        self.verbosity = DEFAULT_VERBOSITY
+
+    def debug(self, level, message):
+        if self.verbosity >= level:
+            print(message, file=sys.stderr)
 
     def parse_arguments(self, arguments):
-        global VERBOSITY
+        # pylint: disable=too-many-branches, eval-used
 
         try:
             # parse command-line arguments using getopt
@@ -500,123 +539,132 @@ class Stm32Loader:
 
         # if there's a non-named argument left, that's a file name
         if arguments:
-            self.configuration['data_file'] = arguments[0]
+            self.configuration["data_file"] = arguments[0]
 
         for option, value in options:
-            if option == '-V':
-                VERBOSITY = 10
-            elif option == '-q':
-                VERBOSITY = 0
-            elif option == '-h':
+            if option == "-V":
+                self.verbosity = 10
+            elif option == "-q":
+                self.verbosity = 0
+            elif option == "-h":
                 self.print_usage()
                 sys.exit(0)
-            elif option == '-e':
-                self.configuration['erase'] = True
-            elif option == '-u':
-                self.configuration['unprotect'] = True
-            elif option == '-w':
-                self.configuration['write'] = True
-            elif option == '-v':
-                self.configuration['verify'] = True
-            elif option == '-r':
-                self.configuration['read'] = True
-            elif option == '-p':
-                self.configuration['port'] = value
-            elif option == '-s':
-                self.configuration['swap_rts_dtr'] = True
-            elif option == '-R':
-                self.configuration['reset_active_high'] = True
-            elif option == '-B':
-                self.configuration['boot0_active_high'] = True
-            elif option == '-b':
-                self.configuration['baud'] = eval(value)
-            elif option == '-f':
-                self.configuration['family'] = value
-            elif option == '-P':
-                assert value.lower() in Stm32Bootloader.PARITY, "Parity value not recognized: '{0}'.".format(value)
-                self.configuration['parity'] = Stm32Bootloader.PARITY[value.lower()]
-            elif option == '-a':
-                self.configuration['address'] = eval(value)
-            elif option == '-g':
-                self.configuration['go_address'] = eval(value)
-            elif option == '-l':
-                self.configuration['length'] = eval(value)
+            elif option == "-e":
+                self.configuration["erase"] = True
+            elif option == "-u":
+                self.configuration["unprotect"] = True
+            elif option == "-w":
+                self.configuration["write"] = True
+            elif option == "-v":
+                self.configuration["verify"] = True
+            elif option == "-r":
+                self.configuration["read"] = True
+            elif option == "-p":
+                self.configuration["port"] = value
+            elif option == "-s":
+                self.configuration["swap_rts_dtr"] = True
+            elif option == "-R":
+                self.configuration["reset_active_high"] = True
+            elif option == "-B":
+                self.configuration["boot0_active_high"] = True
+            elif option == "-b":
+                self.configuration["baud"] = int(eval(value))
+            elif option == "-f":
+                self.configuration["family"] = value
+            elif option == "-P":
+                assert (
+                    value.lower() in Stm32Bootloader.PARITY
+                ), "Parity value not recognized: '{0}'.".format(value)
+                self.configuration["parity"] = Stm32Bootloader.PARITY[value.lower()]
+            elif option == "-a":
+                self.configuration["address"] = int(eval(value))
+            elif option == "-g":
+                self.configuration["go_address"] = int(eval(value))
+            elif option == "-l":
+                self.configuration["length"] = int(eval(value))
             else:
                 assert False, "unhandled option %s" % option
 
     def connect(self):
         self.bootloader = Stm32Bootloader(
-            swap_rts_dtr=self.configuration['swap_rts_dtr'],
-            reset_active_high=self.configuration['reset_active_high'],
-            boot0_active_high=self.configuration['boot0_active_high'],
+            swap_rts_dtr=self.configuration["swap_rts_dtr"],
+            reset_active_high=self.configuration["reset_active_high"],
+            boot0_active_high=self.configuration["boot0_active_high"],
+            verbosity=self.verbosity,
         )
-        self.bootloader.open(
-            self.configuration['port'],
-            self.configuration['baud'],
-            self.configuration['parity'],
+        self.bootloader.setup_connection(
+            self.configuration["port"], self.configuration["baud"], self.configuration["parity"]
         )
-        debug(10, "Open port %(port)s, baud %(baud)d" % {
-            'port': self.configuration['port'],
-            'baud': self.configuration['baud']
-        })
+        self.debug(
+            10,
+            "Open port %(port)s, baud %(baud)d"
+            % {"port": self.configuration["port"], "baud": self.configuration["baud"]},
+        )
         try:
             self.bootloader.reset_from_system_memory()
-        except Exception:
+        except BaseException:
             print("Can't init. Ensure that BOOT0 is enabled and reset device")
             self.bootloader.reset_from_flash()
             sys.exit(1)
 
     def perform_commands(self):
+        # pylint: disable=too-many-branches
         binary_data = None
-        if self.configuration['write'] or self.configuration['verify']:
-            with open(self.configuration['data_file'], 'rb') as read_file:
+        if self.configuration["write"] or self.configuration["verify"]:
+            with open(self.configuration["data_file"], "rb") as read_file:
                 binary_data = bytearray(read_file.read())
-        if self.configuration['unprotect']:
+        if self.configuration["unprotect"]:
             try:
                 self.bootloader.readout_unprotect()
             except CommandException:
                 # may be caused by readout protection
-                debug(0, "Erase failed -- probably due to readout protection")
-                debug(0, "Quit")
+                self.debug(0, "Erase failed -- probably due to readout protection")
+                self.debug(0, "Quit")
                 self.bootloader.reset_from_flash()
                 sys.exit(1)
-        if self.configuration['erase']:
+        if self.configuration["erase"]:
             try:
                 self.bootloader.erase_memory()
             except CommandException:
                 # may be caused by readout protection
-                debug(
+                self.debug(
                     0,
                     "Erase failed -- probably due to readout protection\n"
-                    "consider using the -u (unprotect) option."
+                    "consider using the -u (unprotect) option.",
                 )
                 self.bootloader.reset_from_flash()
                 sys.exit(1)
-        if self.configuration['write']:
-            self.bootloader.write_memory_data(self.configuration['address'], binary_data)
-        if self.configuration['verify']:
-            read_data = self.bootloader.read_memory_data(self.configuration['address'], len(binary_data))
+        if self.configuration["write"]:
+            self.bootloader.write_memory_data(self.configuration["address"], binary_data)
+        if self.configuration["verify"]:
+            read_data = self.bootloader.read_memory_data(
+                self.configuration["address"], len(binary_data)
+            )
             if binary_data == read_data:
                 print("Verification OK")
             else:
                 print("Verification FAILED")
-                print(str(len(binary_data)) + ' vs ' + str(len(read_data)))
-                for i in range(0, len(binary_data)):
-                    if binary_data[i] != read_data[i]:
-                        print(hex(i) + ': ' + hex(binary_data[i]) + ' vs ' + hex(read_data[i]))
-        if not self.configuration['write'] and self.configuration['read']:
-            read_data = self.bootloader.read_memory_data(self.configuration['address'], self.configuration['length'])
-            with open(self.configuration['data_file'], 'wb') as out_file:
+                print(str(len(binary_data)) + " vs " + str(len(read_data)))
+                for address, data_pair in enumerate(zip(binary_data, read_data)):
+                    binary_byte, read_byte = data_pair
+                    if binary_byte != read_byte:
+                        print(hex(address) + ": " + hex(binary_byte) + " vs " + hex(read_byte))
+        if not self.configuration["write"] and self.configuration["read"]:
+            read_data = self.bootloader.read_memory_data(
+                self.configuration["address"], self.configuration["length"]
+            )
+            with open(self.configuration["data_file"], "wb") as out_file:
                 out_file.write(read_data)
-        if self.configuration['go_address'] != -1:
-            self.bootloader.go(self.configuration['go_address'])
+        if self.configuration["go_address"] != -1:
+            self.bootloader.go(self.configuration["go_address"])
 
     def reset(self):
         self.bootloader.reset_from_flash()
 
     @staticmethod
     def print_usage():
-        help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
+        help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
+          [-a address] [-g address] [-f family] [file.bin]
     -e          Erase (note: this is required on previously written memory)
     -u          Unprotect in case erase fails
     -w          Write file content to flash
@@ -638,7 +686,7 @@ class Stm32Loader:
     -B          Make boot0 active high
     -u          Readout unprotect
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
-    
+
     Example: ./%s -e -w -v example/main.bin
 """
         help_text = help_text % (sys.argv[0], sys.argv[0])
@@ -646,22 +694,23 @@ class Stm32Loader:
 
     def read_device_details(self):
         boot_version = self.bootloader.get()
-        debug(0, "Bootloader version %X" % boot_version)
+        self.debug(0, "Bootloader version %X" % boot_version)
         device_id = self.bootloader.get_id()
-        debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
-        family = self.configuration['family']
+        self.debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
+        family = self.configuration["family"]
         if not family:
-            debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
+            self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
         else:
             device_uid = self.bootloader.get_uid(family)
             device_uid_string = self.bootloader.format_uid(device_uid)
-            debug(0, "Device UID: %s" % device_uid_string)
+            self.debug(0, "Device UID: %s" % device_uid_string)
 
             flash_size = self.bootloader.get_flash_size(family)
-            debug(0, "Flash size: %d KiB" % flash_size)
+            self.debug(0, "Flash size: %d KiB" % flash_size)
 
 
 def main():
+    """Parse arguments and execute tasks."""
     loader = Stm32Loader()
     loader.parse_arguments(sys.argv[1:])
     loader.connect()
