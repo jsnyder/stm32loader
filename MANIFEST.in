@@ -1,1 +1,5 @@
-include README.md LICENSE CHANGELOG.md
+include *.md
+include *.cfg
+include *.toml
+include LICENSE
+include .pylintrc
