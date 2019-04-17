@@ -9,16 +9,16 @@
 # Software Foundation; either version 3, or (at your option) any later
 # version.
 #
-# stm32loader is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# stm32loader is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with stm32loader; see the file LICENSE.  If not see
 # <http://www.gnu.org/licenses/>.
 
-"""Flash firmware to STM32 microcontrollers over an RS-232 serial connection."""
+"""Flash firmware to STM32 microcontrollers over a serial connection."""
 
 
 from __future__ import print_function

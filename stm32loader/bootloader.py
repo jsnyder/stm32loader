@@ -8,16 +8,16 @@
 # Software Foundation; either version 3, or (at your option) any later
 # version.
 #
-# stm32loader is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# stm32loader is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with stm32loader; see the file LICENSE.  If not see
 # <http://www.gnu.org/licenses/>.
 
-"""Flash firmware to STM32 microcontrollers over an RS-232 serial connection."""
+"""Talk to an STM32 native bootloader (see ST AN3155)."""
 
 
 from __future__ import print_function
@@ -57,8 +57,6 @@ CHIP_IDS = {
 
 class CommandException(IOError):
     """Error: a command in the STM32 native bootloader failed."""
-
-    pass
 
 
 class Stm32Bootloader:
@@ -140,7 +138,8 @@ class Stm32Bootloader:
         but a straight pyserial serial.Serial object can also be used.
 
 
-        :param connection: Object supporting read() and write(). E.g. serial.Serial().
+        :param connection: Object supporting read() and write().
+          E.g. serial.Serial().
         :param int verbosity: Verbosity level. 0 is quite, 10 is verbose.
         """
         self.connection = connection

@@ -8,9 +8,9 @@
 # Software Foundation; either version 3, or (at your option) any later
 # version.
 #
-# stm32loader is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# stm32loader is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -27,7 +27,7 @@ import serial
 
 
 class SerialConnection:
-    """Wrap a serial.Serial connection and offer enable_reset and enable_boot0."""
+    """Wrap a serial.Serial connection and toggle reset and boot0."""
 
     # pylint: disable=too-many-instance-attributes
 
@@ -72,8 +72,9 @@ class SerialConnection:
 
     def enable_reset(self, enable=True):
         # reset on the STM32 is active low (0 Volt puts the MCU in reset)
-        # but the RS-232 DTR signal is active low by itself, so it inverts this
-        # (writing a logical 1 outputs a low voltage == reset enabled)
+        # but the RS-232 DTR signal is active low by itself, so it
+        # inverts this (writing a logical 1 outputs a low voltage, i.e.
+        # enables reset)
         level = int(enable)
         if self.reset_active_high:
             level = 1 - level
