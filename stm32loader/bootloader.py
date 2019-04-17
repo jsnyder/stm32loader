@@ -22,6 +22,7 @@
 
 from __future__ import print_function
 
+import math
 import operator
 import struct
 import sys
@@ -59,6 +60,68 @@ CHIP_IDS = {
 
 class CommandException(IOError):
     """Error: a command in the STM32 native bootloader failed."""
+
+
+class ShowProgress:
+    """
+    Show progress through a progress bar, as a context manager.
+
+    Return the progress bar object on context enter, allowing the
+    caller to to call next().
+
+    Allow to supply the desired progress bar as None, to disable
+    progress bar output.
+    """
+
+    class _NoProgressBar:
+        """
+        Stub to replace a real progress.bar.Bar.
+
+        Use this if you don't want progress bar output, or if
+        there's an ImportError of progress module.
+        """
+
+        def next(self):  # noqa
+            """Do nothing; be compatible to progress.bar.Bar."""
+
+        def finish(self):
+            """Do nothing; be compatible to progress.bar.Bar."""
+
+    def __init__(self, progress_bar_type):
+        """
+        Construct the context manager object.
+
+        :param progress_bar_type type: Type of progress bar to use.
+           Set to None if you don't want progress bar output.
+        """
+        self.progress_bar_type = progress_bar_type
+        self.progress_bar = None
+
+    def __call__(self, message, maximum):
+        """
+        Return a context manager for a progress bar.
+
+        :param str message: Message to show next to the progress bar.
+        :param int maximum: Maximum value of the progress bar (value at 100%).
+          E.g. 256.
+        :return ShowProgress: Context manager object.
+        """
+        if not self.progress_bar_type:
+            self.progress_bar = self._NoProgressBar()
+        else:
+            self.progress_bar = self.progress_bar_type(
+                message, max=maximum, suffix="%(index)d/%(max)d"
+            )
+
+        return self
+
+    def __enter__(self):
+        """Enter context: return progress bar to allow calling next()."""
+        return self.progress_bar
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context: clean up by finish()ing the progress bar."""
+        self.progress_bar.finish()
 
 
 class Stm32Bootloader:
@@ -127,7 +190,7 @@ class Stm32Bootloader:
 
     extended_erase = False
 
-    def __init__(self, connection, verbosity=5):
+    def __init__(self, connection, verbosity=5, show_progress=None):
         """
         Construct the Stm32Bootloader object.
 
@@ -142,11 +205,14 @@ class Stm32Bootloader:
         :param connection: Object supporting read() and write().
           E.g. serial.Serial().
         :param int verbosity: Verbosity level. 0 is quite, 10 is verbose.
+        :param ShowProgress show_progress: ShowProgress context manager.
+           Set to None to disable progress bar output.
         """
         self.connection = connection
         self._toggle_reset = getattr(connection, "can_toggle_reset", False)
         self._toggle_boot0 = getattr(connection, "can_toggle_boot0", False)
         self.verbosity = verbosity
+        self.show_progress = show_progress or ShowProgress(None)
 
     def write(self, *data):
         """Write the given data to the MCU."""
@@ -365,18 +431,20 @@ class Stm32Bootloader:
         Length may be more than 256 bytes.
         """
         data = bytearray()
-        while length > 256:
-            self.debug(
-                5, "Read %(len)d bytes at 0x%(address)X" % {"address": address, "len": 256}
-            )
-            data = data + self.read_memory(address, 256)
-            address = address + 256
-            length = length - 256
-        if length:
-            self.debug(
-                5, "Read %(len)d bytes at 0x%(address)X" % {"address": address, "len": length}
-            )
-            data = data + self.read_memory(address, length)
+        page_count = int(math.ceil(length / 256.0))
+        self.debug(5, "Read %d pages at address 0x%X..." % (page_count, address))
+        with self.show_progress("Reading", maximum=page_count) as progress_bar:
+            while length:
+                read_length = min(length, 256)
+                self.debug(
+                    10,
+                    "Read %(len)d bytes at 0x%(address)X"
+                    % {"address": address, "len": read_length},
+                )
+                data = data + self.read_memory(address, read_length)
+                progress_bar.next()
+                length = length - read_length
+                address = address + read_length
         return data
 
     def write_memory_data(self, address, data):
@@ -386,20 +454,23 @@ class Stm32Bootloader:
         Data length may be more than 256 bytes.
         """
         length = len(data)
+        page_count = int(math.ceil(length / 256.0))
         offset = 0
-        while length > 256:
-            self.debug(
-                5, "Write %(len)d bytes at 0x%(address)X" % {"address": address, "len": 256}
-            )
-            self.write_memory(address, data[offset : offset + 256])
-            offset += 256
-            address += 256
-            length -= 256
-        if length:
-            self.debug(
-                5, "Write %(len)d bytes at 0x%(address)X" % {"address": address, "len": length}
-            )
-            self.write_memory(address, data[offset : offset + length])
+        self.debug(5, "Write %d pages at address 0x%X..." % (page_count, address))
+
+        with self.show_progress("Writing", maximum=page_count) as progress_bar:
+            while length:
+                write_length = min(length, 256)
+                self.debug(
+                    10,
+                    "Write %(len)d bytes at 0x%(address)X"
+                    % {"address": address, "len": write_length},
+                )
+                self.write_memory(address, data[offset : offset + write_length])
+                progress_bar.next()
+                length -= write_length
+                offset += write_length
+                address += write_length
 
     def _reset(self):
         """Enable or disable the reset IO line (if possible)."""

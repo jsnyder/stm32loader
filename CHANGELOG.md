@@ -3,10 +3,9 @@ v0.4.0
 ======
 * #8: Add support for STM32F7 mcus. By sam-bristow.
 * #9: Support data writes smaller than 256 bytes. By NINI1988.
+* #10: Make stm32loader useful as a library.
+* #4: Bring back support for progress bar.
 * Start using code linting and unit tests.
-* Allow to use stm32loader.main() as a library function.
-* Allow to use Stm32Bootloader as a library class.
-* Allow a custom connection to be used (e.g. I2C instead of UART).
 
 v0.3.3
 ======

@@ -24,6 +24,7 @@ PROJECT_URLS = {
 
 REQUIRED = [
     'pyserial',
+    'progress',
 ]
 
 EXTRAS = {

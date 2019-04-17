@@ -26,7 +26,8 @@ from __future__ import print_function
 import getopt
 import sys
 
-from .bootloader import CHIP_IDS, CommandException, Stm32Bootloader
+from .bootloader import CHIP_IDS, CommandException, ShowProgress, \
+    Stm32Bootloader
 from .rs232 import SerialConnection
 
 DEFAULT_VERBOSITY = 5
@@ -37,6 +38,20 @@ class Stm32Loader:
 
     # serial link bit parity, compatible to pyserial serial.PARTIY_EVEN
     PARITY = {"even": "E", "none": "N"}
+
+    BOOLEAN_FLAG_OPTIONS = {
+        "-e": "erase",
+        "-u": "unprotect",
+        "-w": "write",
+        "-v": "verify",
+        "-r": "read",
+        "-s": "swap_rts_dtr",
+        "-n": "hide_progress_bar",
+        "-R": "reset_active_high",
+        "-B": "boot0_active_high",
+    }
+
+    INTEGER_OPTIONS = {"-b": "baud", "-a": "address", "-g": "go_address", "-l": "length"}
 
     def __init__(self):
         """Construct Stm32Loader object with default settings."""
@@ -56,6 +71,7 @@ class Stm32Loader:
             "swap_rts_dtr": False,
             "reset_active_high": False,
             "boot0_active_high": False,
+            "hide_progress_bar": False,
             "data_file": None,
         }
         self.verbosity = DEFAULT_VERBOSITY
@@ -67,10 +83,9 @@ class Stm32Loader:
 
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
-        # pylint: disable=too-many-branches, eval-used
         try:
             # parse command-line arguments using getopt
-            options, arguments = getopt.getopt(arguments, "hqVeuwvrsRBP:p:b:a:l:g:f:", ["help"])
+            options, arguments = getopt.getopt(arguments, "hqVeuwvrsnRBP:p:b:a:l:g:f:", ["help"])
         except getopt.GetoptError as err:
             # print help information and exit:
             # this prints something like "option -a not recognized"
@@ -82,49 +97,7 @@ class Stm32Loader:
         if arguments:
             self.configuration["data_file"] = arguments[0]
 
-        for option, value in options:
-            if option == "-V":
-                self.verbosity = 10
-            elif option == "-q":
-                self.verbosity = 0
-            elif option in ["-h", "--help"]:
-                self.print_usage()
-                sys.exit(0)
-            elif option == "-e":
-                self.configuration["erase"] = True
-            elif option == "-u":
-                self.configuration["unprotect"] = True
-            elif option == "-w":
-                self.configuration["write"] = True
-            elif option == "-v":
-                self.configuration["verify"] = True
-            elif option == "-r":
-                self.configuration["read"] = True
-            elif option == "-p":
-                self.configuration["port"] = value
-            elif option == "-s":
-                self.configuration["swap_rts_dtr"] = True
-            elif option == "-R":
-                self.configuration["reset_active_high"] = True
-            elif option == "-B":
-                self.configuration["boot0_active_high"] = True
-            elif option == "-b":
-                self.configuration["baud"] = int(eval(value))
-            elif option == "-f":
-                self.configuration["family"] = value
-            elif option == "-P":
-                assert (
-                    value.lower() in Stm32Loader.PARITY
-                ), "Parity value not recognized: '{0}'.".format(value)
-                self.configuration["parity"] = Stm32Loader.PARITY[value.lower()]
-            elif option == "-a":
-                self.configuration["address"] = int(eval(value))
-            elif option == "-g":
-                self.configuration["go_address"] = int(eval(value))
-            elif option == "-l":
-                self.configuration["length"] = int(eval(value))
-            else:
-                assert False, "unhandled option %s" % option
+        self._parse_option_flags(options)
 
     def connect(self):
         """Connect to the RS-232 serial port."""
@@ -155,7 +128,11 @@ class Stm32Loader:
         serial_connection.reset_active_high = self.configuration["reset_active_high"]
         serial_connection.boot0_active_high = self.configuration["boot0_active_high"]
 
-        self.bootloader = Stm32Bootloader(serial_connection, verbosity=self.verbosity)
+        show_progress = self._get_progress_bar(self.configuration["hide_progress_bar"])
+
+        self.bootloader = Stm32Bootloader(
+            serial_connection, verbosity=self.verbosity, show_progress=show_progress
+        )
 
         try:
             self.bootloader.reset_from_system_memory()
@@ -245,6 +222,7 @@ class Stm32Loader:
     -R          Make reset active high
     -B          Make boot0 active high
     -u          Readout unprotect
+    -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
 
     Example: ./%s -p COM7 -f F1
@@ -270,6 +248,49 @@ class Stm32Loader:
 
             flash_size = self.bootloader.get_flash_size(family)
             self.debug(0, "Flash size: %d KiB" % flash_size)
+
+    def _parse_option_flags(self, options):
+        # pylint: disable=eval-used
+        for option, value in options:
+            if option == "-V":
+                self.verbosity = 10
+            elif option == "-q":
+                self.verbosity = 0
+            elif option in ["-h", "--help"]:
+                self.print_usage()
+                sys.exit(0)
+            elif option == "-p":
+                self.configuration["port"] = value
+            elif option == "-f":
+                self.configuration["family"] = value
+            elif option == "-P":
+                assert (
+                    value.lower() in Stm32Loader.PARITY
+                ), "Parity value not recognized: '{0}'.".format(value)
+                self.configuration["parity"] = Stm32Loader.PARITY[value.lower()]
+            elif option in self.INTEGER_OPTIONS:
+                self.configuration[self.INTEGER_OPTIONS[option]] = int(eval(value))
+            elif option in self.BOOLEAN_FLAG_OPTIONS:
+                self.configuration[self.BOOLEAN_FLAG_OPTIONS[option]] = True
+            else:
+                assert False, "unhandled option %s" % option
+
+    @staticmethod
+    def _get_progress_bar(hide_progress_bar=False):
+        if hide_progress_bar:
+            return None
+        desired_progress_bar = None
+        try:
+            from progress.bar import ChargingBar as desired_progress_bar
+        except ImportError:
+            # progress module is a package dependency,
+            # but not strictly required
+            pass
+
+        if not desired_progress_bar:
+            return None
+
+        return ShowProgress(desired_progress_bar)
 
 
 def main(*args, **kwargs):

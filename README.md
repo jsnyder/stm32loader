@@ -35,6 +35,7 @@ Usage
     -R          Make reset active high
     -B          Make boot0 active high
     -u          Readout unprotect
+    -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
 ```
 
