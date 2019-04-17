@@ -27,7 +27,7 @@ import getopt
 import sys
 
 from .bootloader import CHIP_IDS, CommandException, Stm32Bootloader
-from .serial import SerialConnection
+from .rs232 import SerialConnection
 
 DEFAULT_VERBOSITY = 5
 
@@ -43,7 +43,7 @@ class Stm32Loader:
         self.bootloader = None
         self.configuration = {
             "port": "/dev/tty.usbserial-ftCYPMYJ",
-            "baud": 115_200,
+            "baud": 115200,
             "parity": self.PARITY["even"],
             "family": None,
             "address": 0x08000000,
@@ -63,7 +63,7 @@ class Stm32Loader:
     def debug(self, level, message):
         """Log a message to stderror if its level is low enough."""
         if self.verbosity >= level:
-            print(message, file=sys.stderr)
+            sys.stderr.write(message)
 
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
@@ -231,7 +231,7 @@ class Stm32Loader:
     -r          Read from flash and store in local file
     -l length   Length of read
     -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
-    -b baud     Baud speed (default: 115200)
+    -b baud     Baudrate (default: 115200)
     -a address  Target address (default: 0x08000000)
     -g address  Start executing from address (0x08000000, usually)
     -f family   Device family to read out device UID and flash size; e.g F1 for STM32F1xx
@@ -246,9 +246,11 @@ class Stm32Loader:
     -u          Readout unprotect
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
 
+    Example: ./%s -p COM7 -f F1
     Example: ./%s -e -w -v example/main.bin
 """
-        help_text = help_text % (sys.argv[0], sys.argv[0])
+        current_script = sys.argv[0] if sys.argv else "stm32loader"
+        help_text = help_text % (current_script, current_script, current_script)
         print(help_text)
 
     def read_device_details(self):
@@ -269,24 +271,25 @@ class Stm32Loader:
             self.debug(0, "Flash size: %d KiB" % flash_size)
 
 
-def main(arguments=None):
+def main(*args, **kwargs):
     """
     Parse arguments and execute tasks.
 
-    If no arguments are supplied, use the ones from
-    sys.argv.
+    Default usage is to supply *sys.argv[1:].
     """
-    loader = Stm32Loader()
-    if arguments is None:
-        arguments = sys.argv[1]
-    loader.parse_arguments(arguments)
-    loader.connect()
     try:
-        loader.read_device_details()
-        loader.perform_commands()
-    finally:
-        loader.reset()
+        loader = Stm32Loader()
+        loader.parse_arguments(args)
+        loader.connect()
+        try:
+            loader.read_device_details()
+            loader.perform_commands()
+        finally:
+            loader.reset()
+    except SystemExit:
+        if not kwargs.get("avoid_system_exit", False):
+            raise
 
 
 if __name__ == "__main__":
-    main()
+    main(*sys.argv[1:])
