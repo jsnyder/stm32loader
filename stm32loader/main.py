@@ -26,8 +26,7 @@ from __future__ import print_function
 import getopt
 import sys
 
-from .bootloader import CHIP_IDS, CommandException, ShowProgress, \
-    Stm32Bootloader
+from .bootloader import CHIP_IDS, CommandException, ShowProgress, Stm32Bootloader
 from .rs232 import SerialConnection
 
 DEFAULT_VERBOSITY = 5
@@ -55,7 +54,7 @@ class Stm32Loader:
 
     def __init__(self):
         """Construct Stm32Loader object with default settings."""
-        self.bootloader = None
+        self.stm32 = None
         self.configuration = {
             "port": "/dev/tty.usbserial-ftCYPMYJ",
             "baud": 115200,
@@ -130,15 +129,15 @@ class Stm32Loader:
 
         show_progress = self._get_progress_bar(self.configuration["hide_progress_bar"])
 
-        self.bootloader = Stm32Bootloader(
+        self.stm32 = Stm32Bootloader(
             serial_connection, verbosity=self.verbosity, show_progress=show_progress
         )
 
         try:
-            self.bootloader.reset_from_system_memory()
+            self.stm32.reset_from_system_memory()
         except CommandException:
             print("Can't init into bootloader. Ensure that BOOT0 is enabled and reset device.")
-            self.bootloader.reset_from_flash()
+            self.stm32.reset_from_flash()
             sys.exit(1)
 
     def perform_commands(self):
@@ -150,16 +149,16 @@ class Stm32Loader:
                 binary_data = bytearray(read_file.read())
         if self.configuration["unprotect"]:
             try:
-                self.bootloader.readout_unprotect()
+                self.stm32.readout_unprotect()
             except CommandException:
                 # may be caused by readout protection
                 self.debug(0, "Erase failed -- probably due to readout protection")
                 self.debug(0, "Quit")
-                self.bootloader.reset_from_flash()
+                self.stm32.reset_from_flash()
                 sys.exit(1)
         if self.configuration["erase"]:
             try:
-                self.bootloader.erase_memory()
+                self.stm32.erase_memory()
             except CommandException:
                 # may be caused by readout protection
                 self.debug(
@@ -167,12 +166,12 @@ class Stm32Loader:
                     "Erase failed -- probably due to readout protection\n"
                     "consider using the -u (unprotect) option.",
                 )
-                self.bootloader.reset_from_flash()
+                self.stm32.reset_from_flash()
                 sys.exit(1)
         if self.configuration["write"]:
-            self.bootloader.write_memory_data(self.configuration["address"], binary_data)
+            self.stm32.write_memory_data(self.configuration["address"], binary_data)
         if self.configuration["verify"]:
-            read_data = self.bootloader.read_memory_data(
+            read_data = self.stm32.read_memory_data(
                 self.configuration["address"], len(binary_data)
             )
             if binary_data == read_data:
@@ -185,17 +184,17 @@ class Stm32Loader:
                     if binary_byte != read_byte:
                         print(hex(address) + ": " + hex(binary_byte) + " vs " + hex(read_byte))
         if not self.configuration["write"] and self.configuration["read"]:
-            read_data = self.bootloader.read_memory_data(
+            read_data = self.stm32.read_memory_data(
                 self.configuration["address"], self.configuration["length"]
             )
             with open(self.configuration["data_file"], "wb") as out_file:
                 out_file.write(read_data)
         if self.configuration["go_address"] != -1:
-            self.bootloader.go(self.configuration["go_address"])
+            self.stm32.go(self.configuration["go_address"])
 
     def reset(self):
         """Reset the microcontroller."""
-        self.bootloader.reset_from_flash()
+        self.stm32.reset_from_flash()
 
     @staticmethod
     def print_usage():
@@ -234,19 +233,19 @@ class Stm32Loader:
 
     def read_device_details(self):
         """Show MCU details (bootloader version, chip ID, UID, flash size)."""
-        boot_version = self.bootloader.get()
+        boot_version = self.stm32.get()
         self.debug(0, "Bootloader version %X" % boot_version)
-        device_id = self.bootloader.get_id()
+        device_id = self.stm32.get_id()
         self.debug(0, "Chip id: 0x%x (%s)" % (device_id, CHIP_IDS.get(device_id, "Unknown")))
         family = self.configuration["family"]
         if not family:
             self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
         else:
-            device_uid = self.bootloader.get_uid(family)
-            device_uid_string = self.bootloader.format_uid(device_uid)
+            device_uid = self.stm32.get_uid(family)
+            device_uid_string = self.stm32.format_uid(device_uid)
             self.debug(0, "Device UID: %s" % device_uid_string)
 
-            flash_size = self.bootloader.get_flash_size(family)
+            flash_size = self.stm32.get_flash_size(family)
             self.debug(0, "Flash size: %d KiB" % flash_size)
 
     def _parse_option_flags(self, options):
