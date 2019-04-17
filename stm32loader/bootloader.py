@@ -22,6 +22,8 @@
 
 from __future__ import print_function
 
+import operator
+import struct
 import sys
 import time
 from functools import reduce
@@ -431,9 +433,6 @@ class Stm32Bootloader:
 
     @staticmethod
     def _encode_address(address):
-        byte3 = (address >> 0) & 0xFF
-        byte2 = (address >> 8) & 0xFF
-        byte1 = (address >> 16) & 0xFF
-        byte0 = (address >> 24) & 0xFF
-        checksum = byte0 ^ byte1 ^ byte2 ^ byte3
-        return bytearray([byte0, byte1, byte2, byte3, checksum])
+        address_bytes = bytearray(struct.pack(">I", address))
+        checksum_byte = struct.pack("B", reduce(operator.xor, address_bytes))
+        return address_bytes + checksum_byte
