@@ -118,9 +118,6 @@ Not currently supported
 
 Future work
 -----------
-* Allow to load STM32Bootloader without dependencies
-* Allow to run main() with custom arguments from code
-* Support custom non-RS232 links (e.g. I2C)
 * Use intenum for command and reply
 * Use proper logging instead of print statements
 * Drop Python2 compatibility?
