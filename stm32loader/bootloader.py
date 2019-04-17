@@ -166,6 +166,10 @@ class Stm32Bootloader:
         WRITE_PROTECT = 0x63
         WRITE_UNPROTECT = 0x73
 
+        # not used so far
+        READOUT_PROTECT = 0x82
+        READOUT_UNPROTECT = 0x92
+
         # not really listed under commands, but still...
         # 'wake the bootloader' == 'activate USART' == 'synchronize'
         SYNCHRONIZE = 0x7F
