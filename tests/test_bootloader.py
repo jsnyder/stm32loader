@@ -103,7 +103,7 @@ def test_read_memory_sends_length_with_checksum(bootloader, write):
 
 
 def test_command_sends_command_and_control_bytes(bootloader, write):
-    bootloader.command(0x01)
+    bootloader.command(0x01, "bogus command")
     assert write.data_was_written(b"\x01\xfe")
 
 

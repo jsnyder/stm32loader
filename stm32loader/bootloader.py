@@ -173,13 +173,14 @@ class Stm32Bootloader:
         self._enable_boot0(False)
         self._reset()
 
-    def command(self, command):
-        return self.write_and_ack("Command", command, command ^ 0xFF)
+    def command(self, command, description):
+        self.debug(10, "*** Command: %s" % description)
+        ack_received = self.write_and_ack("Command", command, command ^ 0xFF)
+        if not ack_received:
+            raise CommandException("%s (%s) failed: no ack" % (description, command))
 
     def get(self):
-        if not self.command(self.Command.GET):
-            raise CommandException("Get (0x00) failed")
-        self.debug(10, "*** Get command")
+        self.command(self.Command.GET, "Get")
         length = bytearray(self.connection.read())[0]
         version = bytearray(self.connection.read())[0]
         self.debug(10, "    Bootloader version: " + hex(version))
@@ -191,10 +192,7 @@ class Stm32Bootloader:
         return version
 
     def get_version(self):
-        if not self.command(self.Command.GET_VERSION):
-            raise CommandException("GetVersion (0x01) failed")
-
-        self.debug(10, "*** GetVersion command")
+        self.command(self.Command.GET_VERSION, "Get version")
         version = bytearray(self.connection.read())[0]
         self.connection.read(2)
         self._wait_for_ack("0x01 end")
@@ -202,10 +200,7 @@ class Stm32Bootloader:
         return version
 
     def get_id(self):
-        if not self.command(self.Command.GET_ID):
-            raise CommandException("GetID (0x02) failed")
-
-        self.debug(10, "*** GetID command")
+        self.command(self.Command.GET_ID, "Get ID")
         length = bytearray(self.connection.read())[0]
         id_data = bytearray(self.connection.read(length + 1))
         self._wait_for_ack("0x02 end")
@@ -231,10 +226,7 @@ class Stm32Bootloader:
 
     def read_memory(self, address, length):
         assert length <= 256
-        if not self.command(self.Command.READ_MEMORY):
-            raise CommandException("ReadMemory (0x11) failed")
-
-        self.debug(10, "*** ReadMemory command")
+        self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
         nr_of_bytes = (length - 1) & 0xFF
         checksum = nr_of_bytes ^ 0xFF
@@ -243,10 +235,7 @@ class Stm32Bootloader:
 
     def go(self, address):
         # pylint: disable=invalid-name
-        if not self.command(self.Command.GO):
-            raise CommandException("Go (0x21) failed")
-
-        self.debug(10, "*** Go command")
+        self.command(self.Command.GO, "Go")
         self.write_and_ack("0x21 go failed", self._encode_address(address))
 
     def write_memory(self, address, data):
@@ -254,11 +243,7 @@ class Stm32Bootloader:
         if nr_of_bytes == 0:
             return
         assert nr_of_bytes <= 256
-
-        if not self.command(self.Command.WRITE_MEMORY):
-            raise CommandException("Write memory (0x31) failed")
-
-        self.debug(10, "*** Write memory command")
+        self.command(self.Command.WRITE_MEMORY, "Write memory")
         self.write_and_ack("0x31 address failed", self._encode_address(address))
 
         # pad data length to multiple of 4 bytes
@@ -280,12 +265,7 @@ class Stm32Bootloader:
                 raise ValueError("Extended erase can not erase specific sectors: %s." % sectors)
             self.extended_erase_memory()
             return
-
-        if not self.command(self.Command.ERASE):
-            raise CommandException("Erase memory (0x43) failed")
-
-        self.debug(10, "*** Erase memory command")
-
+        self.command(self.Command.ERASE, "Erase memory")
         if sectors:
             # page erase, see ST AN3155
             page_count = len(sectors)
@@ -299,10 +279,7 @@ class Stm32Bootloader:
         self.debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
-        if not self.command(self.Command.EXTENDED_ERASE):
-            raise CommandException("Extended Erase memory (0x44) failed")
-
-        self.debug(10, "*** Extended Erase memory command")
+        self.command(self.Command.EXTENDED_ERASE, "Extended erase memory")
         # Global mass erase and checksum byte
         self.write(b'\xff\xff\x00')
         previous_timeout_value = self.connection.timeout
@@ -313,36 +290,24 @@ class Stm32Bootloader:
         self.debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
-        if not self.command(self.Command.WRITE_PROTECT):
-            raise CommandException("Write Protect memory (0x63) failed")
-
-        self.debug(10, "*** Write protect command")
+        self.command(self.Command.WRITE_PROTECT, "Write protect")
         nr_of_pages = (len(pages) - 1) & 0xFF
         checksum = reduce(operator.xor, pages, nr_of_pages)
         self.write_and_ack("0x63 write protect failed", nr_of_pages, pages, checksum)
         self.debug(10, "    Write protect done")
 
     def write_unprotect(self):
-        if not self.command(self.Command.WRITE_UNPROTECT):
-            raise CommandException("Write Unprotect (0x73) failed")
-
-        self.debug(10, "*** Write Unprotect command")
+        self.command(self.Command.WRITE_UNPROTECT, "Write unprotect")
         self._wait_for_ack("0x73 write unprotect failed")
         self.debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
-        if not self.command(self.Command.READOUT_PROTECT):
-            raise CommandException("Readout protect (0x82) failed")
-
-        self.debug(10, "*** Readout protect command")
+        self.command(self.Command.READOUT_PROTECT, "Readout protect")
         self._wait_for_ack("0x82 readout protect failed")
         self.debug(10, "    Read protect done")
 
     def readout_unprotect(self):
-        if not self.command(self.Command.READOUT_UNPROTECT):
-            raise CommandException("Readout unprotect (0x92) failed")
-
-        self.debug(10, "*** Readout Unprotect command")
+        self.command(self.Command.READOUT_UNPROTECT, "Readout unprotect")
         self._wait_for_ack("0x92 readout unprotect failed")
         self.debug(20, "    Mass erase -- this may take a while")
         time.sleep(20)
