@@ -10,7 +10,8 @@ except ImportError:
     # Python version <= 3.2
     from mock import MagicMock
 
-#pylint: disable=missing-docstring, redefined-outer-name
+# pylint: disable=missing-docstring, redefined-outer-name
+
 
 @pytest.fixture
 def connection():
