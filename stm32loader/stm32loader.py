@@ -31,7 +31,7 @@ import sys
 import time
 from functools import reduce
 
-import serial
+from stm32loader.serial import SerialConnection
 
 DEFAULT_VERBOSITY = 5
 
@@ -110,8 +110,6 @@ class Stm32Bootloader:
         ACK = 0x79
         NACK = 0x1F
 
-    PARITY = {"even": serial.PARITY_EVEN, "none": serial.PARITY_NONE}
-
     UID_ADDRESS = {
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
@@ -138,51 +136,17 @@ class Stm32Bootloader:
 
     extended_erase = False
 
-    def __init__(
-        self,
-        swap_rts_dtr=False,
-        reset_active_high=False,
-        boot0_active_high=False,
-        verbosity=DEFAULT_VERBOSITY,
-    ):
+    def __init__(self, connection, verbosity=DEFAULT_VERBOSITY):
         """
         Construct the Stm32Bootloader object.
 
-        Call setup_connection() before doing any real work.
+        :param connection: Object supporting read() and write(). E.g. serial.Serial().
+        :param int verbosity: Verbosity level. 0 is quite, 10 is verbose.
         """
-        self.serial = None
-        self._swap_rts_dtr = swap_rts_dtr
-        self._reset_active_high = reset_active_high
-        self._boot0_active_high = boot0_active_high
+        self.connection = connection
+        self._toggle_reset = getattr(connection, 'TOGGLES_RESET', False)
+        self._toggle_boot0 = getattr(connection, 'TOGGLES_BOOT0', False)
         self.verbosity = verbosity
-
-    def setup_connection(self, serial_port, baud_rate=115_200, parity=serial.PARITY_EVEN):
-        try:
-            self.serial = serial.Serial(
-                port=serial_port,
-                baudrate=baud_rate,
-                # number of write_data bits
-                bytesize=8,
-                parity=parity,
-                stopbits=1,
-                # don't enable software flow control
-                xonxoff=0,
-                # don't enable RTS/CTS flow control
-                rtscts=0,
-                # set a timeout value, None for waiting forever
-                timeout=5,
-            )
-        except serial.serialutil.SerialException as e:
-            sys.stderr.write(str(e) + "\n")
-            sys.stderr.write(
-                "Is the device connected and powered correctly?\n"
-                "Please use the -p option to select the correct serial port. Examples:\n"
-                "  -p COM3\n"
-                "  -p /dev/ttyS0\n"
-                "  -p /dev/ttyUSB0\n"
-                "  -p /dev/tty.usbserial-ftCYPMYJ\n"
-            )
-            exit(1)
 
     def debug(self, level, message):
         if self.verbosity >= level:
@@ -191,7 +155,7 @@ class Stm32Bootloader:
     def reset_from_system_memory(self):
         self._enable_boot0(True)
         self._reset()
-        self.serial.write(bytearray([self.Command.SYNCHRONIZE]))
+        self.connection.write(bytearray([self.Command.SYNCHRONIZE]))
         return self._wait_for_ack("Syncro")
 
     def reset_from_flash(self):
@@ -202,8 +166,8 @@ class Stm32Bootloader:
         command_byte = bytearray([command])
         control_byte = bytearray([command ^ 0xFF])
 
-        self.serial.write(command_byte)
-        self.serial.write(control_byte)
+        self.connection.write(command_byte)
+        self.connection.write(control_byte)
 
         return self._wait_for_ack(hex(command))
 
@@ -211,10 +175,10 @@ class Stm32Bootloader:
         if not self.command(self.Command.GET):
             raise CommandException("Get (0x00) failed")
         self.debug(10, "*** Get command")
-        length = bytearray(self.serial.read())[0]
-        version = bytearray(self.serial.read())[0]
+        length = bytearray(self.connection.read())[0]
+        version = bytearray(self.connection.read())[0]
         self.debug(10, "    Bootloader version: " + hex(version))
-        data = bytearray(self.serial.read(length))
+        data = bytearray(self.connection.read(length))
         if self.Command.EXTENDED_ERASE in data:
             self.extended_erase = True
         self.debug(10, "    Available commands: " + ", ".join(hex(b) for b in data))
@@ -226,8 +190,8 @@ class Stm32Bootloader:
             raise CommandException("GetVersion (0x01) failed")
 
         self.debug(10, "*** GetVersion command")
-        version = bytearray(self.serial.read())[0]
-        self.serial.read(2)
+        version = bytearray(self.connection.read())[0]
+        self.connection.read(2)
         self._wait_for_ack("0x01 end")
         self.debug(10, "    Bootloader version: " + hex(version))
         return version
@@ -237,8 +201,8 @@ class Stm32Bootloader:
             raise CommandException("GetID (0x02) failed")
 
         self.debug(10, "*** GetID command")
-        length = bytearray(self.serial.read())[0]
-        id_data = bytearray(self.serial.read(length + 1))
+        length = bytearray(self.connection.read())[0]
+        id_data = bytearray(self.connection.read(length + 1))
         self._wait_for_ack("0x02 end")
         _device_id = reduce(lambda x, y: x * 0x100 + y, id_data)
         return _device_id
@@ -266,13 +230,13 @@ class Stm32Bootloader:
             raise CommandException("ReadMemory (0x11) failed")
 
         self.debug(10, "*** ReadMemory command")
-        self.serial.write(self._encode_address(address))
+        self.connection.write(self._encode_address(address))
         self._wait_for_ack("0x11 address failed")
         nr_of_bytes = (length - 1) & 0xFF
         checksum = nr_of_bytes ^ 0xFF
-        self.serial.write(bytearray([nr_of_bytes, checksum]))
+        self.connection.write(bytearray([nr_of_bytes, checksum]))
         self._wait_for_ack("0x11 length failed")
-        return bytearray(self.serial.read(length))
+        return bytearray(self.connection.read(length))
 
     def go(self, address):
         # pylint: disable=invalid-name
@@ -280,7 +244,7 @@ class Stm32Bootloader:
             raise CommandException("Go (0x21) failed")
 
         self.debug(10, "*** Go command")
-        self.serial.write(self._encode_address(address))
+        self.connection.write(self._encode_address(address))
         self._wait_for_ack("0x21 go failed")
 
     def write_memory(self, address, data):
@@ -291,7 +255,7 @@ class Stm32Bootloader:
             raise CommandException("Write memory (0x31) failed")
 
         self.debug(10, "*** Write memory command")
-        self.serial.write(self._encode_address(address))
+        self.connection.write(self._encode_address(address))
         self._wait_for_ack("0x31 address failed")
 
         # pad data length to multiple of 4 bytes
@@ -303,12 +267,12 @@ class Stm32Bootloader:
             data.extend([0xFF] * padding_bytes)
 
         self.debug(10, "    %s bytes to write" % [nr_of_bytes])
-        self.serial.write(bytearray([nr_of_bytes - 1]))
+        self.connection.write(bytearray([nr_of_bytes - 1]))
         checksum = nr_of_bytes - 1
         for data_byte in data:
             checksum = checksum ^ data_byte
-        self.serial.write(bytearray(data))
-        self.serial.write(bytearray([checksum]))
+        self.connection.write(bytearray(data))
+        self.connection.write(bytearray([checksum]))
         self._wait_for_ack("0x31 programming failed")
         self.debug(10, "    Write memory done")
 
@@ -335,14 +299,14 @@ class Stm32Bootloader:
 
         self.debug(10, "*** Extended Erase memory command")
         # Global mass erase and checksum byte
-        self.serial.write(b"\xFF")
-        self.serial.write(b"\xFF")
-        self.serial.write(b"\x00")
-        previous_timeout_value = self.serial.timeout
-        self.serial.timeout = 30
+        self.connection.write(b"\xFF")
+        self.connection.write(b"\xFF")
+        self.connection.write(b"\x00")
+        previous_timeout_value = self.connection.timeout
+        self.connection.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
         self._wait_for_ack("0x44 erasing failed")
-        self.serial.timeout = previous_timeout_value
+        self.connection.timeout = previous_timeout_value
         self.debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
@@ -351,12 +315,12 @@ class Stm32Bootloader:
 
         self.debug(10, "*** Write protect command")
         nr_of_pages = (len(pages) - 1) & 0xFF
-        self.serial.write(bytearray([nr_of_pages]))
+        self.connection.write(bytearray([nr_of_pages]))
         checksum = 0xFF
         for page_index in pages:
             checksum = checksum ^ page_index
-            self.serial.write(bytearray([page_index]))
-        self.serial.write(bytearray([checksum]))
+            self.connection.write(bytearray([page_index]))
+        self.connection.write(bytearray([checksum]))
         self._wait_for_ack("0x63 write protect failed")
         self.debug(10, "    Write protect done")
 
@@ -423,57 +387,36 @@ class Stm32Bootloader:
 
     def _global_erase(self):
         # global erase: n=255, see ST AN3155
-        self.serial.write(b"\xff")
-        self.serial.write(b"\x00")
+        self.connection.write(b"\xff")
+        self.connection.write(b"\x00")
 
     def _page_erase(self, pages):
         # page erase, see ST AN3155
         nr_of_pages = (len(pages) - 1) & 0xFF
-        self.serial.write(bytearray([nr_of_pages]))
+        self.connection.write(bytearray([nr_of_pages]))
         checksum = nr_of_pages
         for page_number in pages:
-            self.serial.write(bytearray([page_number]))
+            self.connection.write(bytearray([page_number]))
             checksum = checksum ^ page_number
-        self.serial.write(bytearray([checksum]))
+        self.connection.write(bytearray([checksum]))
 
     def _reset(self):
-        self._enable_reset(True)
+        if not self._toggle_reset:
+            return
+        self.connection.enable_reset(True)
         time.sleep(0.1)
-        self._enable_reset(False)
+        self.connection.enable_reset(False)
         time.sleep(0.5)
 
-    def _enable_reset(self, enable=True):
-        # reset on the MCU is active low (0 Volt puts the MCU in reset)
-        # but RS-232 DTR is active low by itself so it inverts this
-        # (writing logical 1 outputs a low voltage)
-        level = 1 if enable else 0
-
-        # setting -R (reset active high) ensures that the MCU
-        # gets 3.3 Volt to enable reset
-        if self._reset_active_high:
-            level = 1 - level
-
-        if self._swap_rts_dtr:
-            self.serial.setRTS(level)
-        else:
-            self.serial.setDTR(level)
-
     def _enable_boot0(self, enable=True):
-        # active low unless otherwise specified
-        level = 0 if enable else 1
+        if not self._toggle_boot0:
+            return
 
-        if self._boot0_active_high:
-            # enabled by argument -B (boot0 active high)
-            level = 1 - level
-
-        if self._swap_rts_dtr:
-            self.serial.setDTR(level)
-        else:
-            self.serial.setRTS(level)
+        self.connection.enable_boot0(enable)
 
     def _wait_for_ack(self, info=""):
         try:
-            ack = bytearray(self.serial.read())[0]
+            ack = bytearray(self.connection.read())[0]
         except TypeError:
             raise CommandException("Can't read port or timeout")
 
@@ -498,13 +441,16 @@ class Stm32Bootloader:
 class Stm32Loader:
     """Main application: parse arguments and handle commands."""
 
+    # serial link bit parity, compatible to pyserial serial.PARTIY_EVEN
+    PARITY = {"even": "E", "none": "N"}
+
     def __init__(self):
         """Construct Stm32Loader object with default settings."""
         self.bootloader = None
         self.configuration = {
             "port": "/dev/tty.usbserial-ftCYPMYJ",
             "baud": 115_200,
-            "parity": serial.PARITY_EVEN,
+            "parity": self.PARITY["even"],
             "family": None,
             "address": 0x08000000,
             "erase": False,
@@ -573,9 +519,9 @@ class Stm32Loader:
                 self.configuration["family"] = value
             elif option == "-P":
                 assert (
-                    value.lower() in Stm32Bootloader.PARITY
+                    value.lower() in Stm32Loader.PARITY
                 ), "Parity value not recognized: '{0}'.".format(value)
-                self.configuration["parity"] = Stm32Bootloader.PARITY[value.lower()]
+                self.configuration["parity"] = Stm32Loader.PARITY[value.lower()]
             elif option == "-a":
                 self.configuration["address"] = int(eval(value))
             elif option == "-g":
@@ -586,14 +532,10 @@ class Stm32Loader:
                 assert False, "unhandled option %s" % option
 
     def connect(self):
-        self.bootloader = Stm32Bootloader(
-            swap_rts_dtr=self.configuration["swap_rts_dtr"],
-            reset_active_high=self.configuration["reset_active_high"],
-            boot0_active_high=self.configuration["boot0_active_high"],
-            verbosity=self.verbosity,
-        )
-        self.bootloader.setup_connection(
-            self.configuration["port"], self.configuration["baud"], self.configuration["parity"]
+        serial_connection = SerialConnection(
+            self.configuration["port"],
+            self.configuration["baud"],
+            self.configuration["parity"],
         )
         self.debug(
             10,
@@ -601,9 +543,29 @@ class Stm32Loader:
             % {"port": self.configuration["port"], "baud": self.configuration["baud"]},
         )
         try:
+            serial_connection.connect()
+        except IOError as e:
+            sys.stderr.write(str(e) + "\n")
+            sys.stderr.write(
+                "Is the device connected and powered correctly?\n"
+                "Please use the -p option to select the correct serial port. Examples:\n"
+                "  -p COM3\n"
+                "  -p /dev/ttyS0\n"
+                "  -p /dev/ttyUSB0\n"
+                "  -p /dev/tty.usbserial-ftCYPMYJ\n"
+            )
+            exit(1)
+
+        serial_connection.swap_rts_dtr = self.configuration["swap_rts_dtr"]
+        serial_connection.reset_active_high = self.configuration["reset_active_high"]
+        serial_connection.boot0_active_high = self.configuration["boot0_active_high"]
+
+        self.bootloader = Stm32Bootloader(serial_connection, verbosity=self.verbosity)
+
+        try:
             self.bootloader.reset_from_system_memory()
         except BaseException:
-            print("Can't init. Ensure that BOOT0 is enabled and reset device")
+            print("Can't init into bootloader. Ensure that BOOT0 is enabled and reset device.")
             self.bootloader.reset_from_flash()
             sys.exit(1)
 

@@ -118,7 +118,6 @@ Not currently supported
 
 Future work
 -----------
-* Extract RS-232 details into separate class
 * Allow to load STM32Bootloader without dependencies
 * Allow to run main() with custom arguments from code
 * Support custom non-RS232 links (e.g. I2C)
