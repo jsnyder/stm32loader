@@ -26,8 +26,8 @@ from __future__ import print_function
 import getopt
 import sys
 
-from stm32loader.bootloader import CHIP_IDS, CommandException, Stm32Bootloader
-from stm32loader.serial import SerialConnection
+from .bootloader import CHIP_IDS, CommandException, Stm32Bootloader
+from .serial import SerialConnection
 
 DEFAULT_VERBOSITY = 5
 
