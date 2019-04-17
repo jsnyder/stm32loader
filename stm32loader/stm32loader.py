@@ -1,9 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: sw=4:ts=4:si:et:enc=utf-8
-
-# Author: Ivan A-R <ivan@tuxotronic.org>
-# GitHub repository: https://github.com/jsnyder/stm32loader
+# Authors: Ivan A-R, Floris Lambrechts
+# GitHub repository: https://github.com/florisla/stm32loader
 #
 # This file is part of stm32loader.
 #
@@ -18,7 +15,7 @@
 # for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with stm32loader; see the file COPYING.  If not see
+# along with stm32loader; see the file LICENSE.  If not see
 # <http://www.gnu.org/licenses/>.
 
 """Flash firmware to STM32 microcontrollers over an RS-232 serial connection."""
