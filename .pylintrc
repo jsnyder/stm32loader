@@ -5,6 +5,7 @@ max-line-length=98
 disable=
     fixme,               # TO DOs are not errors
     bad-continuation,    # be compatible to black
+    missing-docstring,
 
 [REPORT]
 score=no

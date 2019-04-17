@@ -123,4 +123,5 @@ Future work
 * Drop Python2 compatibility?
 * Add unit tests
 * Use nox or tox for checking Python version compatibility
+* Add docstrings to all public methods
 * Use Travis or Azure pipelines for CI
