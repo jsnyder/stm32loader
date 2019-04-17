@@ -70,10 +70,10 @@ class Stm32Loader:
         # pylint: disable=too-many-branches, eval-used
         try:
             # parse command-line arguments using getopt
-            options, arguments = getopt.getopt(arguments, "hqVeuwvrsRBP:p:b:a:l:g:f:")
+            options, arguments = getopt.getopt(arguments, "hqVeuwvrsRBP:p:b:a:l:g:f:", ["help"])
         except getopt.GetoptError as err:
             # print help information and exit:
-            # this print something like "option -a not recognized"
+            # this prints something like "option -a not recognized"
             print(str(err))
             self.print_usage()
             sys.exit(2)
@@ -87,7 +87,7 @@ class Stm32Loader:
                 self.verbosity = 10
             elif option == "-q":
                 self.verbosity = 0
-            elif option == "-h":
+            elif option in ["-h", "--help"]:
                 self.print_usage()
                 sys.exit(0)
             elif option == "-e":
