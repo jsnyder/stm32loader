@@ -156,7 +156,7 @@ class Stm32Loader:
 
         try:
             self.bootloader.reset_from_system_memory()
-        except BaseException:
+        except CommandException:
             print("Can't init into bootloader. Ensure that BOOT0 is enabled and reset device.")
             self.bootloader.reset_from_flash()
             sys.exit(1)
