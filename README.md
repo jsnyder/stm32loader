@@ -120,3 +120,4 @@ Future work
 -----------
 * Use proper logging instead of print statements
 * Use Travis or Azure pipelines for CI
+* Support PyPy, PyPy3
