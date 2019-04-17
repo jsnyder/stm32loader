@@ -249,6 +249,8 @@ class Stm32Bootloader:
 
     def write_memory(self, address, data):
         nr_of_bytes = len(data)
+        if nr_of_bytes == 0:
+            return
         assert nr_of_bytes <= 256
 
         if not self.command(self.Command.WRITE_MEMORY):
