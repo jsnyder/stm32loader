@@ -22,7 +22,9 @@ Execute stm32loader as a module.
 This does exactly the same as manually calling 'python stm32loader.py'.
 """
 
-from .stm32loader import main as stm32loader_main
+import sys
+
+from stm32loader.main import main as stm32loader_main
 
 
 def main():
@@ -32,7 +34,7 @@ def main():
     This way it it can be used as an entry point for a console script.
     :return None:
     """
-    stm32loader_main()
+    stm32loader_main(*sys.argv[1:])
 
 
 if __name__ == "__main__":
