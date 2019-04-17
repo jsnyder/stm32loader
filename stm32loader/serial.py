@@ -49,6 +49,7 @@ class SerialConnection:
         self.serial_connection = None
 
     def connect(self):
+        """Connect to the RS-232 serial port."""
         self.serial_connection = serial.Serial(
             port=self.serial_port,
             baudrate=self.baud_rate,
@@ -65,12 +66,15 @@ class SerialConnection:
         )
 
     def write(self, *args, **kwargs):
+        """Write the given data to the serial connection."""
         return self.serial_connection.write(*args, **kwargs)
 
     def read(self, *args, **kwargs):
+        """Read the given amount of bytes from the serial connection."""
         return self.serial_connection.read(*args, **kwargs)
 
     def enable_reset(self, enable=True):
+        """Enable or disable the reset IO line."""
         # reset on the STM32 is active low (0 Volt puts the MCU in reset)
         # but the RS-232 DTR signal is active low by itself, so it
         # inverts this (writing a logical 1 outputs a low voltage, i.e.
@@ -85,6 +89,7 @@ class SerialConnection:
             self.serial_connection.setDTR(level)
 
     def enable_boot0(self, enable=True):
+        """Enable or disable the boot0 IO line."""
         level = int(enable)
 
         # by default, this is active low

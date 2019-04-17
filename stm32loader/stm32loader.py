@@ -61,12 +61,13 @@ class Stm32Loader:
         self.verbosity = DEFAULT_VERBOSITY
 
     def debug(self, level, message):
+        """Log a message to stderror if its level is low enough."""
         if self.verbosity >= level:
             print(message, file=sys.stderr)
 
     def parse_arguments(self, arguments):
+        """Parse the list of command-line arguments."""
         # pylint: disable=too-many-branches, eval-used
-
         try:
             # parse command-line arguments using getopt
             options, arguments = getopt.getopt(arguments, "hqVeuwvrsRBP:p:b:a:l:g:f:")
@@ -126,6 +127,7 @@ class Stm32Loader:
                 assert False, "unhandled option %s" % option
 
     def connect(self):
+        """Connect to the RS-232 serial port."""
         serial_connection = SerialConnection(
             self.configuration["port"], self.configuration["baud"], self.configuration["parity"]
         )
@@ -162,6 +164,7 @@ class Stm32Loader:
             sys.exit(1)
 
     def perform_commands(self):
+        """Run all operations as defined by the configuration."""
         # pylint: disable=too-many-branches
         binary_data = None
         if self.configuration["write"] or self.configuration["verify"]:
@@ -213,10 +216,12 @@ class Stm32Loader:
             self.bootloader.go(self.configuration["go_address"])
 
     def reset(self):
+        """Reset the microcontroller."""
         self.bootloader.reset_from_flash()
 
     @staticmethod
     def print_usage():
+        """Print help text explaining the command-line arguments."""
         help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
           [-a address] [-g address] [-f family] [file.bin]
     -e          Erase (note: this is required on previously written memory)
@@ -247,6 +252,7 @@ class Stm32Loader:
         print(help_text)
 
     def read_device_details(self):
+        """Show MCU details (bootloader version, chip ID, UID, flash size)."""
         boot_version = self.bootloader.get()
         self.debug(0, "Bootloader version %X" % boot_version)
         device_id = self.bootloader.get_id()

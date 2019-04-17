@@ -149,37 +149,48 @@ class Stm32Bootloader:
         self.verbosity = verbosity
 
     def write(self, *data):
+        """Write the given data to the MCU."""
         for data_bytes in data:
             if isinstance(data_bytes, int):
                 data_bytes = struct.pack("B", data_bytes)
             self.connection.write(data_bytes)
 
     def write_and_ack(self, message, *data):
+        """Write data to the MCU and wait until it replies with ACK."""
         # this is a separate method from write() because a keyword
         # argument after *args is not possible in Python 2
         self.write(*data)
         return self._wait_for_ack(message)
 
     def debug(self, level, message):
+        """Print the given message if its level is low enough."""
         if self.verbosity >= level:
             print(message, file=sys.stderr)
 
     def reset_from_system_memory(self):
+        """Reset the MCU with boot0 enabled to enter the bootloader."""
         self._enable_boot0(True)
         self._reset()
         return self.write_and_ack("Synchro", self.Command.SYNCHRONIZE)
 
     def reset_from_flash(self):
+        """Reset the MCU with boot0 disabled."""
         self._enable_boot0(False)
         self._reset()
 
     def command(self, command, description):
+        """
+        Send the given command to the MCU.
+
+        Raise CommandException if there's no ACK replied.
+        """
         self.debug(10, "*** Command: %s" % description)
         ack_received = self.write_and_ack("Command", command, command ^ 0xFF)
         if not ack_received:
             raise CommandException("%s (%s) failed: no ack" % (description, command))
 
     def get(self):
+        """Return the bootloader version and remember supported commands."""
         self.command(self.Command.GET, "Get")
         length = bytearray(self.connection.read())[0]
         version = bytearray(self.connection.read())[0]
@@ -192,6 +203,11 @@ class Stm32Bootloader:
         return version
 
     def get_version(self):
+        """
+        Return the bootloader version.
+
+        Read protection status readout is not yet implemented.
+        """
         self.command(self.Command.GET_VERSION, "Get version")
         version = bytearray(self.connection.read())[0]
         self.connection.read(2)
@@ -200,6 +216,7 @@ class Stm32Bootloader:
         return version
 
     def get_id(self):
+        """Send the 'Get ID' command and return the device (model) ID."""
         self.command(self.Command.GET_ID, "Get ID")
         length = bytearray(self.connection.read())[0]
         id_data = bytearray(self.connection.read(length + 1))
@@ -208,23 +225,31 @@ class Stm32Bootloader:
         return _device_id
 
     def get_flash_size(self, device_family):
+        """Return the MCU's flash size in bytes."""
         flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
         flash_size = flash_size_bytes[0] + flash_size_bytes[1] * 256
         return flash_size
 
     def get_uid(self, device_id):
+        """Send the 'Get UID' command and return the device UID."""
         uid_address = self.UID_ADDRESS[device_id]
         uid = self.read_memory(uid_address, 12)
         return uid
 
     @staticmethod
     def format_uid(uid):
+        """Return a readable string from the given UID."""
         swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
         uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
         return uid_string
 
     def read_memory(self, address, length):
+        """
+        Return the memory contents of flash at the given address.
+
+        Supports maximum 256 bytes.
+        """
         assert length <= 256
         self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
@@ -234,11 +259,17 @@ class Stm32Bootloader:
         return bytearray(self.connection.read(length))
 
     def go(self, address):
+        """Send the 'Go' command to start execution of firmware."""
         # pylint: disable=invalid-name
         self.command(self.Command.GO, "Go")
         self.write_and_ack("0x21 go failed", self._encode_address(address))
 
     def write_memory(self, address, data):
+        """
+        Write the given data to flash at the given address.
+
+        Supports maximum 256 bytes.
+        """
         nr_of_bytes = len(data)
         if nr_of_bytes == 0:
             return
@@ -279,6 +310,7 @@ class Stm32Bootloader:
         self.debug(10, "    Erase memory done")
 
     def extended_erase_memory(self):
+        """Send the extended erase command to erase the full flash content."""
         self.command(self.Command.EXTENDED_ERASE, "Extended erase memory")
         # Global mass erase and checksum byte
         self.write(b'\xff\xff\x00')
@@ -290,6 +322,7 @@ class Stm32Bootloader:
         self.debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
+        """Enable write protection on the given flash pages."""
         self.command(self.Command.WRITE_PROTECT, "Write protect")
         nr_of_pages = (len(pages) - 1) & 0xFF
         checksum = reduce(operator.xor, pages, nr_of_pages)
@@ -297,16 +330,23 @@ class Stm32Bootloader:
         self.debug(10, "    Write protect done")
 
     def write_unprotect(self):
+        """Disable write protection of the flash memory."""
         self.command(self.Command.WRITE_UNPROTECT, "Write unprotect")
         self._wait_for_ack("0x73 write unprotect failed")
         self.debug(10, "    Write Unprotect done")
 
     def readout_protect(self):
+        """Enable readout protection of the flash memory."""
         self.command(self.Command.READOUT_PROTECT, "Readout protect")
         self._wait_for_ack("0x82 readout protect failed")
         self.debug(10, "    Read protect done")
 
     def readout_unprotect(self):
+        """
+        Disable readout protection of the flash memory.
+
+        Beware, this will erase the flash content.
+        """
         self.command(self.Command.READOUT_UNPROTECT, "Readout unprotect")
         self._wait_for_ack("0x92 readout unprotect failed")
         self.debug(20, "    Mass erase -- this may take a while")
@@ -316,6 +356,11 @@ class Stm32Bootloader:
         self.reset_from_system_memory()
 
     def read_memory_data(self, address, length):
+        """
+        Return flash content from the given address and byte count.
+
+        Length may be more than 256 bytes.
+        """
         data = bytearray()
         while length > 256:
             self.debug(
@@ -332,6 +377,11 @@ class Stm32Bootloader:
         return data
 
     def write_memory_data(self, address, data):
+        """
+        Write the given data to flash.
+
+        Data length may be more than 256 bytes.
+        """
         length = len(data)
         offset = 0
         while length > 256:
@@ -349,6 +399,7 @@ class Stm32Bootloader:
             self.write_memory(address, data[offset : offset + length])
 
     def _reset(self):
+        """Enable or disable the reset IO line (if possible)."""
         if not self._toggle_reset:
             return
         self.connection.enable_reset(True)
@@ -357,12 +408,14 @@ class Stm32Bootloader:
         time.sleep(0.5)
 
     def _enable_boot0(self, enable=True):
+        """Enable or disable the boot0 IO line (if possible)."""
         if not self._toggle_boot0:
             return
 
         self.connection.enable_boot0(enable)
 
     def _wait_for_ack(self, info=""):
+        """Read a byte and raise CommandException if it's not ACK."""
         try:
             ack = bytearray(self.connection.read())[0]
         except TypeError:
@@ -377,6 +430,7 @@ class Stm32Bootloader:
 
     @staticmethod
     def _encode_address(address):
+        """Return the given address as big-endian bytes with a checksum."""
         address_bytes = bytearray(struct.pack(">I", address))
         checksum_byte = struct.pack("B", reduce(operator.xor, address_bytes))
         return address_bytes + checksum_byte

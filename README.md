@@ -119,5 +119,4 @@ Not currently supported
 Future work
 -----------
 * Use proper logging instead of print statements
-* Add docstrings to all public methods
 * Use Travis or Azure pipelines for CI
