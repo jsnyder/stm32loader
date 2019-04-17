@@ -114,3 +114,17 @@ Not currently supported
 * Command-line argument for write protection/unprotection
 * STM8 devices (ST UM0560)
 * Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
+
+
+Future work
+-----------
+* Extract RS-232 details into separate class
+* Allow to load STM32Bootloader without dependencies
+* Allow to run main() with custom arguments from code
+* Support custom non-RS232 links (e.g. I2C)
+* Use intenum for command and reply
+* Use proper logging instead of print statements
+* Drop Python2 compatibility?
+* Add unit tests
+* Use nox or tox for checking Python version compatibility
+* Use Travis or Azure pipelines for CI
