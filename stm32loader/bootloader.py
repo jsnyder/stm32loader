@@ -133,12 +133,11 @@ class Stm32Bootloader:
 
         The supplied connection can be any object that supports
         read() and write().  Optionally, it may also offer
-        enable_reset() and enable_boot0; it should advertize this by
+        enable_reset() and enable_boot0(); it should advertise this by
         setting TOGGLES_RESET and TOGGLES_BOOT0 to True.
 
         The default implementation is stm32loader.connection.SerialConnection,
         but a straight pyserial serial.Serial object can also be used.
-
 
         :param connection: Object supporting read() and write().
           E.g. serial.Serial().
@@ -149,6 +148,18 @@ class Stm32Bootloader:
         self._toggle_boot0 = getattr(connection, "can_toggle_boot0", False)
         self.verbosity = verbosity
 
+    def write(self, *data):
+        for data_bytes in data:
+            if isinstance(data_bytes, int):
+                data_bytes = struct.pack("B", data_bytes)
+            self.connection.write(data_bytes)
+
+    def write_and_ack(self, message, *data):
+        # this is a separate method from write() because a keyword
+        # argument after *args is not possible in Python 2
+        self.write(*data)
+        return self._wait_for_ack(message)
+
     def debug(self, level, message):
         if self.verbosity >= level:
             print(message, file=sys.stderr)
@@ -156,21 +167,14 @@ class Stm32Bootloader:
     def reset_from_system_memory(self):
         self._enable_boot0(True)
         self._reset()
-        self.connection.write(bytearray([self.Command.SYNCHRONIZE]))
-        return self._wait_for_ack("Syncro")
+        return self.write_and_ack("Synchro", self.Command.SYNCHRONIZE)
 
     def reset_from_flash(self):
         self._enable_boot0(False)
         self._reset()
 
     def command(self, command):
-        command_byte = bytearray([command])
-        control_byte = bytearray([command ^ 0xFF])
-
-        self.connection.write(command_byte)
-        self.connection.write(control_byte)
-
-        return self._wait_for_ack(hex(command))
+        return self.write_and_ack("Command", command, command ^ 0xFF)
 
     def get(self):
         if not self.command(self.Command.GET):
@@ -231,12 +235,10 @@ class Stm32Bootloader:
             raise CommandException("ReadMemory (0x11) failed")
 
         self.debug(10, "*** ReadMemory command")
-        self.connection.write(self._encode_address(address))
-        self._wait_for_ack("0x11 address failed")
+        self.write_and_ack("0x11 address failed", self._encode_address(address))
         nr_of_bytes = (length - 1) & 0xFF
         checksum = nr_of_bytes ^ 0xFF
-        self.connection.write(bytearray([nr_of_bytes, checksum]))
-        self._wait_for_ack("0x11 length failed")
+        self.write_and_ack("0x11 length failed", nr_of_bytes, checksum)
         return bytearray(self.connection.read(length))
 
     def go(self, address):
@@ -245,8 +247,7 @@ class Stm32Bootloader:
             raise CommandException("Go (0x21) failed")
 
         self.debug(10, "*** Go command")
-        self.connection.write(self._encode_address(address))
-        self._wait_for_ack("0x21 go failed")
+        self.write_and_ack("0x21 go failed", self._encode_address(address))
 
     def write_memory(self, address, data):
         nr_of_bytes = len(data)
@@ -258,8 +259,7 @@ class Stm32Bootloader:
             raise CommandException("Write memory (0x31) failed")
 
         self.debug(10, "*** Write memory command")
-        self.connection.write(self._encode_address(address))
-        self._wait_for_ack("0x31 address failed")
+        self.write_and_ack("0x31 address failed", self._encode_address(address))
 
         # pad data length to multiple of 4 bytes
         if nr_of_bytes % 4 != 0:
@@ -270,17 +270,14 @@ class Stm32Bootloader:
             data.extend([0xFF] * padding_bytes)
 
         self.debug(10, "    %s bytes to write" % [nr_of_bytes])
-        self.connection.write(bytearray([nr_of_bytes - 1]))
-        checksum = nr_of_bytes - 1
-        for data_byte in data:
-            checksum = checksum ^ data_byte
-        self.connection.write(bytearray(data))
-        self.connection.write(bytearray([checksum]))
-        self._wait_for_ack("0x31 programming failed")
+        checksum = reduce(operator.xor, data, nr_of_bytes - 1)
+        self.write_and_ack("0x31 programming failed", nr_of_bytes - 1, data, checksum)
         self.debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
         if self.extended_erase:
+            if sectors:
+                raise ValueError("Extended erase can not erase specific sectors: %s." % sectors)
             self.extended_erase_memory()
             return
 
@@ -290,9 +287,14 @@ class Stm32Bootloader:
         self.debug(10, "*** Erase memory command")
 
         if sectors:
-            self._page_erase(sectors)
+            # page erase, see ST AN3155
+            page_count = len(sectors)
+            checksum = reduce(operator.xor, sectors, page_count)
+            self.write(page_count, sectors, checksum)
         else:
-            self._global_erase()
+            # global erase: n=255 (page count)
+            self.write(255, 0)
+
         self._wait_for_ack("0x43 erase failed")
         self.debug(10, "    Erase memory done")
 
@@ -302,9 +304,7 @@ class Stm32Bootloader:
 
         self.debug(10, "*** Extended Erase memory command")
         # Global mass erase and checksum byte
-        self.connection.write(b"\xFF")
-        self.connection.write(b"\xFF")
-        self.connection.write(b"\x00")
+        self.write(b'\xff\xff\x00')
         previous_timeout_value = self.connection.timeout
         self.connection.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
@@ -318,13 +318,8 @@ class Stm32Bootloader:
 
         self.debug(10, "*** Write protect command")
         nr_of_pages = (len(pages) - 1) & 0xFF
-        self.connection.write(bytearray([nr_of_pages]))
-        checksum = 0xFF
-        for page_index in pages:
-            checksum = checksum ^ page_index
-            self.connection.write(bytearray([page_index]))
-        self.connection.write(bytearray([checksum]))
-        self._wait_for_ack("0x63 write protect failed")
+        checksum = reduce(operator.xor, pages, nr_of_pages)
+        self.write_and_ack("0x63 write protect failed", nr_of_pages, pages, checksum)
         self.debug(10, "    Write protect done")
 
     def write_unprotect(self):
@@ -388,21 +383,6 @@ class Stm32Bootloader:
             )
             self.write_memory(address, data[offset : offset + length])
 
-    def _global_erase(self):
-        # global erase: n=255, see ST AN3155
-        self.connection.write(b"\xff")
-        self.connection.write(b"\x00")
-
-    def _page_erase(self, pages):
-        # page erase, see ST AN3155
-        nr_of_pages = (len(pages) - 1) & 0xFF
-        self.connection.write(bytearray([nr_of_pages]))
-        checksum = nr_of_pages
-        for page_number in pages:
-            self.connection.write(bytearray([page_number]))
-            checksum = checksum ^ page_number
-        self.connection.write(bytearray([checksum]))
-
     def _reset(self):
         if not self._toggle_reset:
             return
@@ -425,8 +405,7 @@ class Stm32Bootloader:
 
         if ack == self.Reply.NACK:
             raise CommandException("NACK " + info)
-
-        if ack != self.Reply.ACK:
+        elif ack != self.Reply.ACK:
             raise CommandException("Unknown response. " + info + ": " + hex(ack))
 
         return 1
