@@ -266,10 +266,17 @@ class Stm32Loader:
             self.debug(0, "Flash size: %d KiB" % flash_size)
 
 
-def main():
-    """Parse arguments and execute tasks."""
+def main(arguments=None):
+    """
+    Parse arguments and execute tasks.
+
+    If no arguments are supplied, use the ones from
+    sys.argv.
+    """
     loader = Stm32Loader()
-    loader.parse_arguments(sys.argv[1:])
+    if arguments is None:
+        arguments = sys.argv[1]
+    loader.parse_arguments(arguments)
     loader.connect()
     try:
         loader.read_device_details()
