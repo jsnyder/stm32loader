@@ -23,6 +23,7 @@ Handle RS-232 serial communication through pyserial.
 Offer support for toggling RESET and BOOT0.
 """
 
+# not naming this file itself 'serial', becase that name-clashes in Python 2
 import serial
 
 
@@ -31,7 +32,7 @@ class SerialConnection:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, serial_port, baud_rate=115_200, parity="E"):
+    def __init__(self, serial_port, baud_rate=115200, parity="E"):
         """Construct a SerialConnection (not yet connected)."""
         self.serial_port = serial_port
         self.baud_rate = baud_rate
