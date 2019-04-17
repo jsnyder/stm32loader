@@ -128,12 +128,6 @@ def test_erase_memory_with_sectors_sends_sector_addresses_with_(bootloader, writ
     assert write.data_was_written(b'\x01\x02\x04\x08\x0b')
 
 
-def test_erase_memory_with_extended_erase_enabled_and_specific_sectors_raises_error(bootloader):
-    bootloader.extended_erase = True
-    with pytest.raises(ValueError, match="Extended erase .* specific sectors.*14, 16"):
-        bootloader.erase_memory([14, 16])
-
-
 def test_extended_erase_memory_sends_global_mass_erase(bootloader, write):
     bootloader.extended_erase_memory()
     assert write.data_was_written(b'\xff\xff\x00')

@@ -291,9 +291,12 @@ class Stm32Bootloader:
         self.debug(10, "    Write memory done")
 
     def erase_memory(self, sectors=None):
-        if self.extended_erase:
-            if sectors:
-                raise ValueError("Extended erase can not erase specific sectors: %s." % sectors)
+        """
+        Erase flash memory at the given sectors.
+
+        Set sectors to None to erase the full memory.
+        """
+        if self.extended_erase and not sectors:
             self.extended_erase_memory()
             return
         self.command(self.Command.ERASE, "Erase memory")
