@@ -63,7 +63,7 @@ class Stm32Loader:
     def debug(self, level, message):
         """Log a message to stderror if its level is low enough."""
         if self.verbosity >= level:
-            sys.stderr.write(message)
+            print(message, file=sys.stderr)
 
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
@@ -139,14 +139,15 @@ class Stm32Loader:
         try:
             serial_connection.connect()
         except IOError as e:
-            sys.stderr.write(str(e) + "\n")
-            sys.stderr.write(
+            print(str(e) + "\n", file=sys.stderr)
+            print(
                 "Is the device connected and powered correctly?\n"
                 "Please use the -p option to select the correct serial port. Examples:\n"
                 "  -p COM3\n"
                 "  -p /dev/ttyS0\n"
                 "  -p /dev/ttyUSB0\n"
-                "  -p /dev/tty.usbserial-ftCYPMYJ\n"
+                "  -p /dev/tty.usbserial-ftCYPMYJ\n",
+                file=sys.stderr,
             )
             exit(1)
 

@@ -165,7 +165,7 @@ class Stm32Bootloader:
     def debug(self, level, message):
         """Print the given message if its level is low enough."""
         if self.verbosity >= level:
-            sys.stderr.write(message)
+            print(message, file=sys.stderr)
 
     def reset_from_system_memory(self):
         """Reset the MCU with boot0 enabled to enter the bootloader."""
