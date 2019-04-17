@@ -10,6 +10,7 @@ except ImportError:
     # Python version <= 3.2
     from mock import MagicMock
 
+#pylint: disable=missing-docstring, redefined-outer-name
 
 @pytest.fixture
 def connection():
@@ -38,7 +39,7 @@ def bootloader(connection):
     return Stm32Bootloader(connection)
 
 
-def test_constructor_with_connection_None_passes():
+def test_constructor_with_connection_none_passes():
     Stm32Bootloader(connection=None)
 
 
@@ -49,7 +50,7 @@ def test_constructor_does_not_use_connection_directly(connection):
 
 def test_write_without_data_sends_no_bytes(bootloader, write):
     bootloader.write()
-    assert len(write.written_data) == 0
+    assert not write.written_data
 
 
 def test_write_with_bytes_sends_bytes_verbatim(bootloader, write):
@@ -97,11 +98,6 @@ def test_read_memory_sends_length_with_checksum(bootloader, write):
     assert write.data_was_written(b'\x0f\xf0')
 
 
-def test_read_memory_sends_length_with_checksum(bootloader, write):
-    bootloader.read_memory(0, 0x0f + 1)
-    assert write.data_was_written(b'\x0f\xf0')
-
-
 def test_command_sends_command_and_control_bytes(bootloader, write):
     bootloader.command(0x01, "bogus command")
     assert write.data_was_written(b"\x01\xfe")
@@ -114,6 +110,7 @@ def test_reset_from_system_memory_sends_command_synchronize(bootloader, write):
 
 
 def test_encode_address_returns_correct_bytes_with_checksum():
+    # pylint:disable=protected-access
     encoded_address = Stm32Bootloader._encode_address(0x04030201)
     assert bytes(encoded_address) == b"\x04\x03\x02\x01\x04"
 

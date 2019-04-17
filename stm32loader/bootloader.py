@@ -316,7 +316,7 @@ class Stm32Bootloader:
         """Send the extended erase command to erase the full flash content."""
         self.command(self.Command.EXTENDED_ERASE, "Extended erase memory")
         # Global mass erase and checksum byte
-        self.write(b'\xff\xff\x00')
+        self.write(b"\xff\xff\x00")
         previous_timeout_value = self.connection.timeout
         self.connection.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
@@ -426,7 +426,7 @@ class Stm32Bootloader:
 
         if ack == self.Reply.NACK:
             raise CommandException("NACK " + info)
-        elif ack != self.Reply.ACK:
+        if ack != self.Reply.ACK:
             raise CommandException("Unknown response. " + info + ": " + hex(ack))
 
         return 1
