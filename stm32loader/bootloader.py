@@ -534,6 +534,36 @@ class Stm32Bootloader:
                 offset += write_length
                 address += write_length
 
+    @staticmethod
+    def verify_data(read_data, reference_data):
+        """
+        Raise an error if the given data does not match its reference.
+
+        Error type is DataMismatchError.
+
+        :param read_data: Data to compare.
+        :param reference_data: Data to compare, as reference.
+        :return None:
+        """
+        if read_data == reference_data:
+            return
+
+        if len(read_data) != len(reference_data):
+            raise DataMismatchError(
+                "Data length does not match: %d bytes vs %d bytes."
+                % (len(read_data), len(reference_data))
+            )
+
+        # data differs; find out where and raise VerifyError
+        for address, data_pair in enumerate(zip(reference_data, read_data)):
+            reference_byte, read_byte = data_pair
+            if reference_byte != read_byte:
+                raise DataMismatchError(
+                    "Verification data does not match read data. "
+                    "First mismatch at address: 0x%X read 0x%X vs 0x%X expected."
+                    % (address, bytearray([read_byte])[0], bytearray([reference_byte])[0])
+                )
+
     def _reset(self):
         """Enable or disable the reset IO line (if possible)."""
         if not self._toggle_reset:

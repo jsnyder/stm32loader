@@ -171,3 +171,17 @@ def test_extended_erase_memory_with_pages_sends_two_byte_sector_addresses_with_s
 def test_write_protect_sends_page_addresses_and_checksum(bootloader, write):
     bootloader.write_protect([0x01, 0x08])
     assert write.data_was_written(b'\x01\x08\x08')
+
+
+def test_verify_data_with_identical_data_passes():
+    Stm32Bootloader.verify_data(b'\x05', b'\x05')
+
+
+def test_verify_data_with_different_byte_count_raises_verify_error_complaining_about_length_difference():
+    with pytest.raises(Stm32.DataMismatchError, match=r"Data length does not match.*2.*vs.*1.*bytes"):
+        Stm32Bootloader.verify_data(b'\x05\x06', b'\x01')
+
+
+def test_verify_data_with_non_identical_data_raises_verify_error_complaining_about_mismatched_byte():
+    with pytest.raises(Stm32.DataMismatchError, match=r"Verification data does not match read data.*mismatch.*0x1.*0x6.*0x7"):
+        Stm32Bootloader.verify_data(b'\x05\x06', b'\x05\x07')

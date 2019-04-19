@@ -177,15 +177,12 @@ class Stm32Loader:
             read_data = self.stm32.read_memory_data(
                 self.configuration["address"], len(binary_data)
             )
-            if binary_data == read_data:
+            try:
+                bootloader.Stm32Bootloader.verify_data(read_data, binary_data)
                 print("Verification OK")
-            else:
-                print("Verification FAILED")
-                print(str(len(binary_data)) + " vs " + str(len(read_data)))
-                for address, data_pair in enumerate(zip(binary_data, read_data)):
-                    binary_byte, read_byte = data_pair
-                    if binary_byte != read_byte:
-                        print(hex(address) + ": " + hex(binary_byte) + " vs " + hex(read_byte))
+            except bootloader.DataMismatchError as e:
+                print("Verification FAILED: %s" % e, file=sys.stdout)
+                sys.exit(1)
         if not self.configuration["write"] and self.configuration["read"]:
             read_data = self.stm32.read_memory_data(
                 self.configuration["address"], self.configuration["length"]
