@@ -119,6 +119,7 @@ Not currently supported
 * Command-line argument for readout protection
 * Command-line argument for write protection/unprotection
 * STM8 devices (ST UM0560)
+* Paged flash erase for devices with page size <> 1 KiB
 * Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
 
 
@@ -128,3 +129,4 @@ Future work
 * Try Azure pipelines for CI
 * Support PyPy, PyPy3
 * Drop Python2 support; start using intenum for commands and replies
+* Determine flash page size or make this configurable

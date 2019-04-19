@@ -5,8 +5,9 @@ v0.4.0
 * #9: Support data writes smaller than 256 bytes. By NINI1988.
 * #10: Make stm32loader useful as a library.
 * #4: Bring back support for progress bar.
-* #11: Support page erase in extended (two-byte addressing) erase mode
-* #12: Allow to supply the serial port as an environment variable
+* #12: Allow to supply the serial port as an environment variable.
+* #11: Support paged erase in extended (two-byte addressing) erase mode.
+       Note: this is not yet tested on hardware.
 * Start using code linting and unit tests.
 * Start using Continuous Integration (Travis CI).
 

@@ -40,17 +40,15 @@ def stm32(serial_connection):
 def test_erase_with_page_erases_only_that_page(stm32):
     stm32.reset_from_system_memory()
     base = 0x08000000
-    before, middle, after = base + 0, base + 256, base + 512
+    before, middle, after = base + 0, base + 1024, base + 2048
 
-    # erase full device
+    # erase full device and check that it reset data bytes
     stm32.erase_memory()
-
-    # check that erase was successful
     assert all(byte == 0xFF for byte in stm32.read_memory(before, 16))
     assert all(byte == 0xFF for byte in stm32.read_memory(middle, 16))
     assert all(byte == 0xFF for byte in stm32.read_memory(after, 16))
 
-    # write zeros to three pages (and verify success)
+    # write zeros to three pages and verify data has changed
     stm32.write_memory(before, bytearray([0x00] * 16))
     stm32.write_memory(middle, bytearray([0x00] * 16))
     stm32.write_memory(after, bytearray([0x00] * 16))
@@ -58,11 +56,8 @@ def test_erase_with_page_erases_only_that_page(stm32):
     assert all(byte == 0x00 for byte in stm32.read_memory(middle, 16))
     assert all(byte == 0x00 for byte in stm32.read_memory(after, 16))
 
-    # erase only the middle page
-    stm32.erase_memory(pages=[0])
-
-    # check that middle page is erased, others are not
+    # erase only the middle page and check only that one's bytes are rest
+    stm32.erase_memory(pages=[1])
     assert all(byte == 0x00 for byte in stm32.read_memory(before, 16))
     assert all(byte == 0xFF for byte in stm32.read_memory(middle, 256))
     assert all(byte == 0x00 for byte in stm32.read_memory(after, 16))
-

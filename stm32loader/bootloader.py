@@ -208,7 +208,8 @@ class Stm32Bootloader:
         "F7": 0x1FF0F442,
     }
 
-    PAGE_SIZE = 256  # bytes
+    DATA_TRANSFER_SIZE = 256  # bytes
+    FLASH_PAGE_SIZE = 1024  # bytes
 
     def __init__(self, connection, verbosity=5, show_progress=None):
         """
@@ -315,7 +316,7 @@ class Stm32Bootloader:
         """Return the MCU's flash size in bytes."""
         flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
-        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * self.PAGE_SIZE
+        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * self.DATA_TRANSFER_SIZE
         return flash_size
 
     def get_uid(self, device_id):
@@ -337,7 +338,7 @@ class Stm32Bootloader:
 
         Supports maximum 256 bytes.
         """
-        if length > self.PAGE_SIZE:
+        if length > self.DATA_TRANSFER_SIZE:
             raise DataLengthError("Can not read more than 256 bytes at once.")
         self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
@@ -361,7 +362,7 @@ class Stm32Bootloader:
         nr_of_bytes = len(data)
         if nr_of_bytes == 0:
             return
-        if nr_of_bytes > self.PAGE_SIZE:
+        if nr_of_bytes > self.DATA_TRANSFER_SIZE:
             raise DataLengthError("Can not write more than 256 bytes at once.")
         self.command(self.Command.WRITE_MEMORY, "Write memory")
         self.write_and_ack("0x31 address failed", self._encode_address(address))
@@ -456,8 +457,9 @@ class Stm32Bootloader:
         """Enable write protection on the given flash pages."""
         self.command(self.Command.WRITE_PROTECT, "Write protect")
         nr_of_pages = (len(pages) - 1) & 0xFF
-        checksum = reduce(operator.xor, pages, nr_of_pages)
-        self.write_and_ack("0x63 write protect failed", nr_of_pages, pages, checksum)
+        page_numbers = bytearray(pages)
+        checksum = reduce(operator.xor, page_numbers, nr_of_pages)
+        self.write_and_ack("0x63 write protect failed", nr_of_pages, page_numbers, checksum)
         self.debug(10, "    Write protect done")
 
     def write_unprotect(self):
@@ -493,11 +495,11 @@ class Stm32Bootloader:
         Length may be more than 256 bytes.
         """
         data = bytearray()
-        page_count = int(math.ceil(length / float(self.PAGE_SIZE)))
-        self.debug(5, "Read %d pages at address 0x%X..." % (page_count, address))
-        with self.show_progress("Reading", maximum=page_count) as progress_bar:
+        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
+        self.debug(5, "Read %d chunks at address 0x%X..." % (chunk_count, address))
+        with self.show_progress("Reading", maximum=chunk_count) as progress_bar:
             while length:
-                read_length = min(length, self.PAGE_SIZE)
+                read_length = min(length, self.DATA_TRANSFER_SIZE)
                 self.debug(
                     10,
                     "Read %(len)d bytes at 0x%(address)X"
@@ -516,13 +518,13 @@ class Stm32Bootloader:
         Data length may be more than 256 bytes.
         """
         length = len(data)
-        page_count = int(math.ceil(length / float(self.PAGE_SIZE)))
+        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
         offset = 0
-        self.debug(5, "Write %d pages at address 0x%X..." % (page_count, address))
+        self.debug(5, "Write %d chunks at address 0x%X..." % (chunk_count, address))
 
-        with self.show_progress("Writing", maximum=page_count) as progress_bar:
+        with self.show_progress("Writing", maximum=chunk_count) as progress_bar:
             while length:
-                write_length = min(length, self.PAGE_SIZE)
+                write_length = min(length, self.DATA_TRANSFER_SIZE)
                 self.debug(
                     10,
                     "Write %(len)d bytes at 0x%(address)X"
