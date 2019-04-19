@@ -24,6 +24,7 @@
 from __future__ import print_function
 
 import getopt
+import os
 import sys
 
 from . import bootloader
@@ -56,7 +57,7 @@ class Stm32Loader:
         """Construct Stm32Loader object with default settings."""
         self.stm32 = None
         self.configuration = {
-            "port": "/dev/tty.usbserial-ftCYPMYJ",
+            "port": os.environ.get("STM32LOADER_SERIAL_PORT"),
             "baud": 115200,
             "parity": self.PARITY["even"],
             "family": None,
@@ -97,6 +98,14 @@ class Stm32Loader:
             self.configuration["data_file"] = arguments[0]
 
         self._parse_option_flags(options)
+
+        if not self.configuration["port"]:
+            print(
+                "No serial port configured. Supply the -p option "
+                "or configure environment variable STM32LOADER_SERIAL_PORT.",
+                file=sys.stderr,
+            )
+            sys.exit(3)
 
     def connect(self):
         """Connect to the RS-232 serial port."""

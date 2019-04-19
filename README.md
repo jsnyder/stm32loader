@@ -44,10 +44,13 @@ Example
 -------
 
 ```
-stm32loader.py -e -w -v somefile.bin
+stm32loader.py -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
 ```
 
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then perform a verification after writing is finished.
+
+You can skip the `-p` option by configuring environment variable
+`STM32LOADER_SERIAL_PORT`.
 
 
 Reference documents
@@ -118,7 +121,6 @@ Not currently supported
 
 Future work
 -----------
-* Allow to set default serial port through environment variable
 * Use proper logging instead of print statements
 * Use Travis or Azure pipelines for CI
 * Support PyPy, PyPy3

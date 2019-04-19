@@ -69,6 +69,28 @@ def test_unexisting_serial_port_prints_readable_error(capsys):
     assert "Is the device connected and powered correctly?" in captured.err
 
 
+def test_missing_argument_p_prints_readable_error(capsys):
+    main(avoid_system_exit=True)
+    captured = capsys.readouterr()
+    assert "No serial port configured" in captured.err
+    assert "Supply the -p option" in captured.err
+    assert "environment variable STM32LOADER_SERIAL_PORT" in captured.err
+
+
+def test_env_var_stm32loader_serial_port_defines_port(capsys):
+    os.environ['STM32LOADER_SERIAL_PORT'] = "COM109"
+    main(avoid_system_exit=True)
+    captured = capsys.readouterr()
+    assert "port 'COM109'" in captured.err
+
+
+def test_argument_p_overrules_env_var_for_serial_port(capsys):
+    os.environ['STM32LOADER_SERIAL_PORT'] = "COM120"
+    main("-p", "COM121", avoid_system_exit=True)
+    captured = capsys.readouterr()
+    assert "port 'COM121'" in captured.err
+
+
 @pytest.mark.hardware
 @pytest.mark.missing_hardware
 def test_device_not_connected_prints_readable_error(stm32loader, capsys):
