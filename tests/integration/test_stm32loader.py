@@ -65,7 +65,8 @@ def test_argument_h_prints_help_info(help_argument, capsys):
 def test_unexisting_serial_port_prints_readable_error(capsys):
     main("-p", "COM108", avoid_system_exit=True)
     captured = capsys.readouterr()
-    assert "could not open port 'COM108'" in captured.err
+    assert "could not open port " in captured.err
+    assert ("port 'COM108'" in captured.err or "port COM108" in captured.err)
     assert "Is the device connected and powered correctly?" in captured.err
 
 
@@ -81,14 +82,14 @@ def test_env_var_stm32loader_serial_port_defines_port(capsys):
     os.environ['STM32LOADER_SERIAL_PORT'] = "COM109"
     main(avoid_system_exit=True)
     captured = capsys.readouterr()
-    assert "port 'COM109'" in captured.err
+    assert ("port 'COM109'" in captured.err or "port COM109" in captured.err)
 
 
 def test_argument_p_overrules_env_var_for_serial_port(capsys):
     os.environ['STM32LOADER_SERIAL_PORT'] = "COM120"
     main("-p", "COM121", avoid_system_exit=True)
     captured = capsys.readouterr()
-    assert "port 'COM121'" in captured.err
+    assert ("port 'COM121'" in captured.err or "port COM121" in captured.err)
 
 
 @pytest.mark.hardware
