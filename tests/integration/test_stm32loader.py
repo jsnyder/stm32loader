@@ -62,6 +62,22 @@ def test_argument_h_prints_help_info(help_argument, capsys):
     assert "Example:" in captured.out
 
 
+def test_unexisting_serial_port_prints_readable_error(capsys):
+    main("-p", "COM108", avoid_system_exit=True)
+    captured = capsys.readouterr()
+    assert "could not open port 'COM108'" in captured.err
+    assert "Is the device connected and powered correctly?" in captured.err
+
+
+@pytest.mark.hardware
+@pytest.mark.missing_hardware
+def test_device_not_connected_prints_readable_error(stm32loader, capsys):
+    stm32loader()
+    captured = capsys.readouterr()
+    assert "Can't init into bootloader." in captured.err
+    assert "Ensure that BOOT0 is enabled and reset the device." in captured.err
+
+
 @pytest.mark.hardware
 def test_argument_f_prints_chip_id_and_device_type(stm32loader, capsys):
     stm32loader("-f", STM32_CHIP_FAMILY)

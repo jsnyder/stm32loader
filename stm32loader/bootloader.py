@@ -581,16 +581,15 @@ class Stm32Bootloader:
         self.connection.enable_boot0(enable)
 
     def _wait_for_ack(self, info=""):
-        """Read a byte and raise CommandException if it's not ACK."""
-        try:
-            ack = bytearray(self.connection.read())[0]
-        except TypeError:
-            raise CommandException("Can't read port or timeout")
-
-        if ack == self.Reply.NACK:
-            raise CommandException("NACK " + info)
-        if ack != self.Reply.ACK:
-            raise CommandException("Unknown response. " + info + ": " + hex(ack))
+        """Read a byte and raise CommandError if it's not ACK."""
+        read_data = bytearray(self.connection.read())
+        if not read_data:
+            raise CommandError("Can't read port or timeout")
+        reply = read_data[0]
+        if reply == self.Reply.NACK:
+            raise CommandError("NACK " + info)
+        if reply != self.Reply.ACK:
+            raise CommandError("Unknown response. " + info + ": " + hex(reply))
 
         return 1
 
