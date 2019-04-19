@@ -596,6 +596,8 @@ class Stm32Bootloader:
     @staticmethod
     def _encode_address(address):
         """Return the given address as big-endian bytes with a checksum."""
+        # address in four bytes, big-endian
         address_bytes = bytearray(struct.pack(">I", address))
+        # checksum as single byte
         checksum_byte = struct.pack("B", reduce(operator.xor, address_bytes))
         return address_bytes + checksum_byte
