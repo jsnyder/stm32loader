@@ -60,7 +60,7 @@ class Stm32Loader:
             "port": os.environ.get("STM32LOADER_SERIAL_PORT"),
             "baud": 115200,
             "parity": self.PARITY["even"],
-            "family": None,
+            "family": os.environ.get("STM32LOADER_FAMILY"),
             "address": 0x08000000,
             "erase": False,
             "unprotect": False,

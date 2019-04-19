@@ -53,6 +53,7 @@ This will pre-erase flash, write `somefile.bin` to the flash on the device, and 
 
 You can skip the `-p` option by configuring environment variable
 `STM32LOADER_SERIAL_PORT`.
+Similarly, `-f` may be supplied through `STM32LOADER_FAMILY`.
 
 
 Reference documents
