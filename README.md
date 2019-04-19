@@ -1,5 +1,7 @@
 STM32Loader
-===========
+=========== 
+
+[![Build Status](https://travis-ci.org/florisla/stm32loader.svg?branch=master)](https://travis-ci.org/florisla/stm32loader)
 
 Python script to upload or download firmware to / from
 ST Microelectronics STM32 microcontrollers over UART.
@@ -122,6 +124,6 @@ Not currently supported
 Future work
 -----------
 * Use proper logging instead of print statements
-* Use Travis or Azure pipelines for CI
+* Try Azure pipelines for CI
 * Support PyPy, PyPy3
 * Drop Python2 support; start using intenum for commands and replies

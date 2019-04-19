@@ -1,0 +1,30 @@
+language: python
+
+matrix:
+  include:
+    # Lint using nox on native Python 3.6
+    - python: "3.6"
+      env: NOXSESSION="lint"
+
+    # Test using nox on native Python 3.5/3.6/3.7
+    - python: "3.5"
+      env: NOXSESSION="tests-3.5"
+    - python: "3.6"
+      env: NOXSESSION="tests-3.6"
+    - python: "3.7"
+      env: NOXSESSION="tests-3.7"
+      dist: xenial  # necessary for Python 3.7
+      sudo: required  # necessary for Python 3.7
+
+    # Test using nox on non-native Python version 3.6
+    # (nox does not natively run on 2.7 / 3.4)
+    - python: "3.6"
+      env: NOXSESSION="tests-2.7"
+    - python: "3.6"
+      env: NOXSESSION="tests-3.4"
+
+install:
+  - pip install --upgrade pip setuptools nox pyserial progress
+  - pip install .
+
+script: nox --session "$NOXSESSION"

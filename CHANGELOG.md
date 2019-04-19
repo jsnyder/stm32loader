@@ -8,6 +8,7 @@ v0.4.0
 * #11: Support page erase in extended (two-byte addressing) erase mode
 * #12: Allow to supply the serial port as an environment variable
 * Start using code linting and unit tests.
+* Start using Continuous Integration (Travis CI).
 
 v0.3.3
 ======
