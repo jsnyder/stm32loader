@@ -1,1 +1,7 @@
-include README.md LICENSE CHANGELOG.md
+include *.md
+include *.cfg
+include *.toml
+include LICENSE
+include .pylintrc
+include noxfile.py
+recursive-include tests *.py

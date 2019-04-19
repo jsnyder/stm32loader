@@ -1,0 +1,16 @@
+[FORMAT]
+max-line-length=98
+
+[MESSAGES CONTROL]
+disable=
+    fixme,               # TO DOs are not errors
+    bad-continuation,    # be compatible to black
+
+[REPORT]
+score=no
+
+[BASIC]
+good-names=
+    i,
+    e,
+    namespace,

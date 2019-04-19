@@ -1,5 +1,7 @@
 STM32Loader
-===========
+=========== 
+
+[![Build Status](https://travis-ci.org/florisla/stm32loader.svg?branch=master)](https://travis-ci.org/florisla/stm32loader)
 
 Python script to upload or download firmware to / from
 ST Microelectronics STM32 microcontrollers over UART.
@@ -7,7 +9,7 @@ ST Microelectronics STM32 microcontrollers over UART.
 Also supports ST BlueNRG devices, and the SweetPeas bootloader
 for Wiznet W7500.
 
-Compatible with Python version 3.2 to 3.7 or 2.7.
+Compatible with Python version 3.4 to 3.7 or 2.7.
 
 
 Usage
@@ -35,6 +37,7 @@ Usage
     -R          Make reset active high
     -B          Make boot0 active high
     -u          Readout unprotect
+    -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
 ```
 
@@ -43,10 +46,14 @@ Example
 -------
 
 ```
-stm32loader.py -e -w -v somefile.bin
+stm32loader.py -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
 ```
 
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then perform a verification after writing is finished.
+
+You can skip the `-p` option by configuring environment variable
+`STM32LOADER_SERIAL_PORT`.
+Similarly, `-f` may be supplied through `STM32LOADER_FAMILY`.
 
 
 Reference documents
@@ -62,17 +69,17 @@ Acknowledgement
 
 Original Version by Ivan A-R (tuxotronic.org).
 Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
-Atokulus, sam-bristow.
+Atokulus, sam-bristow, NINI1988.
 
 Inspiration for features from:
 
-* Configurable RTS/DTR and polarity, extended erase with sectors:
+* Configurable RTS/DTR and polarity, extended erase with pages:
   https://github.com/pazzarpj/stm32loader
   
 * Memory unprotect
   https://github.com/3drobotics/stm32loader
 
-* Correct checksum calculation for sector erase:
+* Correct checksum calculation for paged erase:
   https://github.com/jsnyder/stm32loader/pull/4
 
 * ST BlueNRG chip support
@@ -109,8 +116,17 @@ adepter (it needs to toggle, whereas BOOT0 does not).
 Not currently supported
 -----------------------
 
-* Extended erase with specific sectors
 * Command-line argument for readout protection
 * Command-line argument for write protection/unprotection
 * STM8 devices (ST UM0560)
+* Paged flash erase for devices with page size <> 1 KiB
 * Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
+
+
+Future work
+-----------
+* Use proper logging instead of print statements
+* Try Azure pipelines for CI
+* Support PyPy, PyPy3
+* Drop Python2 support; start using intenum for commands and replies
+* Determine flash page size or make this configurable

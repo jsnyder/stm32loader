@@ -1,0 +1,16 @@
+
+[tool.black]
+line-length = 98
+# not including py27 since that triggers black
+# to change print("") into print ("")
+target-version = ['py34', 'py35', 'py36', 'py37']
+exclude = '''
+/(
+    \.git
+  | \.idea
+  | __pycache__
+  | build
+  | dist
+  | .*\.egg-info
+)/
+'''
