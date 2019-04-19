@@ -127,19 +127,45 @@ def test_encode_address_returns_correct_bytes_with_checksum():
     assert bytes(encoded_address) == b"\x04\x03\x02\x01\x04"
 
 
-def test_erase_memory_without_sectors_sends_global_erase(bootloader, write):
+def test_erase_memory_without_pages_sends_global_erase(bootloader, write):
     bootloader.erase_memory()
     assert write.data_was_written(b'\xff\x00')
 
 
-def test_erase_memory_with_sectors_sends_sector_addresses_with_(bootloader, write):
+def test_erase_memory_with_pages_sends_sector_count(bootloader, write):
+    bootloader.erase_memory([0x11, 0x12, 0x13, 0x14])
+    assert write.data_was_written(b'\x03')
+
+
+def test_erase_memory_with_pages_sends_sector_addresses_with_checksum(bootloader, write):
     bootloader.erase_memory([0x01, 0x02, 0x04, 0x08])
-    assert write.data_was_written(b'\x01\x02\x04\x08\x0b')
+    print(write.written_data)
+    assert write.data_was_written(b'\x01\x02\x04\x08\x0c')
 
 
-def test_extended_erase_memory_sends_global_mass_erase(bootloader, write):
+def test_erase_memory_with_page_count_higher_than_255_raises_page_index_error(bootloader):
+    with pytest.raises(Stm32.PageIndexError, match="Can not erase more than 255 pages at once."):
+        bootloader.erase_memory([1] * 256)
+
+
+def test_extended_erase_memory_without_pages_sends_global_mass_erase(bootloader, write):
     bootloader.extended_erase_memory()
     assert write.data_was_written(b'\xff\xff\x00')
+
+
+def test_extended_erase_memory_with_page_count_higher_than_65535_raises_page_index_error(bootloader):
+    with pytest.raises(Stm32.PageIndexError, match="Can not erase more than 65535 pages at once."):
+        bootloader.extended_erase_memory([1] * 65536)
+
+
+def test_extended_erase_memory_with_pages_sends_two_byte_sector_count(bootloader, write):
+    bootloader.extended_erase_memory([0x11, 0x12, 0x13, 0x14])
+    assert write.data_was_written(b'\x00\x03')
+
+
+def test_extended_erase_memory_with_pages_sends_two_byte_sector_addresses_with_single_byte_checksum(bootloader, write):
+    bootloader.extended_erase_memory([0x01, 0x02, 0x04, 0x0ff0])
+    assert write.data_was_written(b'\x00\x01\x00\x02\x00\x04\x0f\xf0\xfb')
 
 
 def test_write_protect_sends_page_addresses_and_checksum(bootloader, write):

@@ -5,6 +5,7 @@ v0.4.0
 * #9: Support data writes smaller than 256 bytes. By NINI1988.
 * #10: Make stm32loader useful as a library.
 * #4: Bring back support for progress bar.
+* #11: Support page erase in extended (two-byte addressing) erase mode
 * Start using code linting and unit tests.
 
 v0.3.3

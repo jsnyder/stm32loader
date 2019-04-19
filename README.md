@@ -67,13 +67,13 @@ Atokulus, sam-bristow, NINI1988.
 
 Inspiration for features from:
 
-* Configurable RTS/DTR and polarity, extended erase with sectors:
+* Configurable RTS/DTR and polarity, extended erase with pages:
   https://github.com/pazzarpj/stm32loader
   
 * Memory unprotect
   https://github.com/3drobotics/stm32loader
 
-* Correct checksum calculation for sector erase:
+* Correct checksum calculation for paged erase:
   https://github.com/jsnyder/stm32loader/pull/4
 
 * ST BlueNRG chip support
@@ -110,7 +110,6 @@ adepter (it needs to toggle, whereas BOOT0 does not).
 Not currently supported
 -----------------------
 
-* Extended erase with specific sectors
 * Command-line argument for readout protection
 * Command-line argument for write protection/unprotection
 * STM8 devices (ST UM0560)

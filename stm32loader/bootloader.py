@@ -208,7 +208,6 @@ class Stm32Bootloader:
         "F7": 0x1FF0F442,
     }
 
-    extended_erase = False
     PAGE_SIZE = 256  # bytes
 
     def __init__(self, connection, verbosity=5, show_progress=None):
@@ -234,6 +233,7 @@ class Stm32Bootloader:
         self._toggle_boot0 = getattr(connection, "can_toggle_boot0", False)
         self.verbosity = verbosity
         self.show_progress = show_progress or ShowProgress(None)
+        self.extended_erase = False
 
     def write(self, *data):
         """Write the given data to the MCU."""
@@ -379,21 +379,31 @@ class Stm32Bootloader:
         self.write_and_ack("0x31 programming failed", nr_of_bytes - 1, data, checksum)
         self.debug(10, "    Write memory done")
 
-    def erase_memory(self, sectors=None):
+    def erase_memory(self, pages=None):
         """
-        Erase flash memory at the given sectors.
+        Erase flash memory at the given pages.
 
-        Set sectors to None to erase the full memory.
+        Set pages to None to erase the full memory.
+        :param iterable pages: Iterable of integer page addresses, zero-based.
+          Set to None to trigger global mass erase.
         """
-        if self.extended_erase and not sectors:
-            self.extended_erase_memory()
+        if self.extended_erase:
+            # use erase with two-byte addresses
+            self.extended_erase_memory(pages)
             return
+
         self.command(self.Command.ERASE, "Erase memory")
-        if sectors:
+        if pages:
             # page erase, see ST AN3155
-            page_count = len(sectors)
-            checksum = reduce(operator.xor, sectors, page_count)
-            self.write(page_count, sectors, checksum)
+            if len(pages) > 255:
+                raise PageIndexError(
+                    "Can not erase more than 255 pages at once.\n"
+                    "Set pages to None to do global erase or supply fewer pages."
+                )
+            page_count = (len(pages) - 1) & 0xFF
+            page_numbers = bytearray(pages)
+            checksum = reduce(operator.xor, page_numbers, page_count)
+            self.write(page_count, page_numbers, checksum)
         else:
             # global erase: n=255 (page count)
             self.write(255, 0)
@@ -401,16 +411,45 @@ class Stm32Bootloader:
         self._wait_for_ack("0x43 erase failed")
         self.debug(10, "    Erase memory done")
 
-    def extended_erase_memory(self):
-        """Send the extended erase command to erase the full flash content."""
+    def extended_erase_memory(self, pages=None):
+        """
+        Erase flash memory using two-byte addressing at the given pages.
+
+        Set pages to None to erase the full memory.
+
+        Not all devices support the extended erase command.
+
+        :param iterable pages: Iterable of integer page addresses, zero-based.
+          Set to None to trigger global mass erase.
+        """
         self.command(self.Command.EXTENDED_ERASE, "Extended erase memory")
-        # Global mass erase and checksum byte
-        self.write(b"\xff\xff\x00")
+        if pages:
+            # page erase, see ST AN3155
+            if len(pages) > 65535:
+                raise PageIndexError(
+                    "Can not erase more than 65535 pages at once.\n"
+                    "Set pages to None to do global erase or supply fewer pages."
+                )
+            page_count = (len(pages) & 0xFF) - 1
+            page_count_bytes = bytearray(struct.pack(">H", page_count))
+            page_bytes = bytearray(len(pages) * 2)
+            for i, page in enumerate(pages):
+                struct.pack_into(">H", page_bytes, i * 2, page)
+            checksum = reduce(operator.xor, page_count_bytes)
+            checksum = reduce(operator.xor, page_bytes, checksum)
+            self.write(page_count_bytes, page_bytes, checksum)
+        else:
+            # global mass erase: n=0xffff (page count) + checksum
+            # TO DO: support 0xfffe bank 1 erase / 0xfffe bank 2 erase
+            self.write(b"\xff\xff\x00")
+
         previous_timeout_value = self.connection.timeout
         self.connection.timeout = 30
         print("Extended erase (0x44), this can take ten seconds or more")
-        self._wait_for_ack("0x44 erasing failed")
-        self.connection.timeout = previous_timeout_value
+        try:
+            self._wait_for_ack("0x44 erasing failed")
+        finally:
+            self.connection.timeout = previous_timeout_value
         self.debug(10, "    Extended Erase memory done")
 
     def write_protect(self, pages):
