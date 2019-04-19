@@ -28,7 +28,7 @@ import os
 import sys
 
 from . import bootloader
-from .rs232 import SerialConnection
+from .uart import SerialConnection
 
 DEFAULT_VERBOSITY = 5
 

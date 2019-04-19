@@ -13,7 +13,7 @@ supply the following as argument to pytest:
 """
 
 from stm32loader.bootloader import Stm32Bootloader
-from stm32loader.rs232 import SerialConnection
+from stm32loader.uart import SerialConnection
 
 import pytest
 
