@@ -41,7 +41,6 @@ try:
 except FileNotFoundError:
     LONG_DESCRIPTION = DESCRIPTION
 
-VERSION = None
 setup(
     name=NAME,
     version=VERSION,
