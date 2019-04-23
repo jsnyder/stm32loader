@@ -1,7 +1,10 @@
 STM32Loader
 =========== 
 
+[![PyPI package](https://badge.fury.io/py/stm32loader.svg)](https://badge.fury.io/py/stm32loader)
 [![Build Status](https://travis-ci.org/florisla/stm32loader.svg?branch=master)](https://travis-ci.org/florisla/stm32loader)
+[![License](https://img.shields.io/pypi/l/stm32loader.svg)](https://pypi.org/project/stm32loader/)
+[![Downloads](https://pepy.tech/badge/stm32loader)](https://pepy.tech/project/stm32loader)
 
 Python script to upload or download firmware to / from
 ST Microelectronics STM32 microcontrollers over UART.
