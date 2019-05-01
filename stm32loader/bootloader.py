@@ -33,6 +33,7 @@ CHIP_IDS = {
     # see ST AN2606 Table 116 Bootloader device-dependent parameters
     # 16 to 32 KiB
     0x412: "STM32F10x Low-density",
+    0x444: "STM32F03xx4/6",
     # 64 to 128 KiB
     0x410: "STM32F10x Medium-density",
     0x420: "STM32F10x Medium-density value line",
@@ -184,7 +185,10 @@ class Stm32Bootloader:
         ACK = 0x79
         NACK = 0x1F
 
+    UID_NOT_SUPPORTED = -1
     UID_ADDRESS = {
+        # No unique id for these parts
+        "F0": UID_NOT_SUPPORTED,
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E8,
@@ -198,6 +202,9 @@ class Stm32Bootloader:
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
 
     FLASH_SIZE_ADDRESS = {
+        # ST RM0360 section 27.1 Memory size data register
+        # F030x4/x6/x8/xC, F070x6/xB
+        "F0": 0x1FFFF7CC,
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E0,
@@ -322,15 +329,21 @@ class Stm32Bootloader:
     def get_uid(self, device_id):
         """Send the 'Get UID' command and return the device UID."""
         uid_address = self.UID_ADDRESS[device_id]
-        uid = self.read_memory(uid_address, 12)
-        return uid
+        if uid_address == self.UID_NOT_SUPPORTED:
+            return self.UID_NOT_SUPPORTED
+        else:
+            uid = self.read_memory(uid_address, 12)
+            return uid
 
     @staticmethod
     def format_uid(uid):
         """Return a readable string from the given UID."""
-        swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
-        uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
-        return uid_string
+        if uid == -1:
+            return "UID Not Supported"
+        else:
+            swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
+            uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
+            return uid_string
 
     def read_memory(self, address, length):
         """
