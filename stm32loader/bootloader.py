@@ -352,11 +352,11 @@ class Stm32Bootloader:
         return uid
 
     @classmethod
-    def format_uid(self, uid):
+    def format_uid(cls, uid):
         """Return a readable string from the given UID."""
-        if uid == self.UID_NOT_SUPPORTED:
+        if uid == cls.UID_NOT_SUPPORTED:
             return "UID not supported in this part"
-        if uid == self.UID_ADDRESS_UNKNOWN:
+        if uid == cls.UID_ADDRESS_UNKNOWN:
             return "UID address unknown"
 
         swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
