@@ -339,6 +339,8 @@ class Stm32Bootloader:
         Return UIT_ADDRESS_UNKNOWN if the address of the device's
         UID is not known.
 
+        :param str device_id: Device family name such as "F1".
+          See UID_ADDRESS.
         :return byterary: UID bytes of the device, or 0 or -1 when
           not available.
         """
