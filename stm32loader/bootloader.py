@@ -331,26 +331,36 @@ class Stm32Bootloader:
         return flash_size
 
     def get_uid(self, device_id):
-        """Send the 'Get UID' command and return the device UID if the address for UID is known."""
+        """
+        Send the 'Get UID' command and return the device UID.
+
+        Return UID_NOT_SUPPORTED if the device does not have
+        a UID.
+        Return UIT_ADDRESS_UNKNOWN if the address of the device's
+        UID is not known.
+
+        :return byterary: UID bytes of the device, or 0 or -1 when
+          not available.
+        """
         uid_address = self.UID_ADDRESS.get(device_id, self.UID_ADDRESS_UNKNOWN)
         if uid_address is None:
-            uid = self.UID_NOT_SUPPORTED
-        elif uid_address == self.UID_ADDRESS_UNKNOWN:
-            uid = self.UID_ADDRESS_UNKNOWN
-        else:
-            uid = self.read_memory(uid_address, 12)
+            return self.UID_NOT_SUPPORTED
+        if uid_address == self.UID_ADDRESS_UNKNOWN:
+            return self.UID_ADDRESS_UNKNOWN
+
+        uid = self.read_memory(uid_address, 12)
         return uid
 
     @classmethod
     def format_uid(self, uid):
         """Return a readable string from the given UID."""
         if uid == self.UID_NOT_SUPPORTED:
-            uid_string = "UID not supported in this part"
-        elif uid == self.UID_ADDRESS_UNKNOWN:
-            uid_string = "UID address unknown"
-        else:
-            swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
-            uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
+            return "UID not supported in this part"
+        if uid == self.UID_ADDRESS_UNKNOWN:
+            return "UID address unknown"
+
+        swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
+        uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
         return uid_string
 
     def read_memory(self, address, length):
