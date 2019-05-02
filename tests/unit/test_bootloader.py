@@ -210,7 +210,7 @@ def test_get_uid_for_unknown_family_returns_uid_address_unknown(bootloader):
     [
         (0, "UID not supported in this part"),
         (-1, "UID address unknown"),
-        (b'\x12\x34\x56\x78\x9a\xbc\xde\x01\x12\x34\x56\x78', "3412-7856-01DEBC9A-78563412"),
+        (bytearray(b"\x12\x34\x56\x78\x9a\xbc\xde\x01\x12\x34\x56\x78"), "3412-7856-01DEBC9A-78563412"),
     ],
 )
 def test_format_uid_returns_correct_string(bootloader, uid_string):
