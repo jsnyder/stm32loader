@@ -185,10 +185,9 @@ class Stm32Bootloader:
         ACK = 0x79
         NACK = 0x1F
 
-    UID_NOT_SUPPORTED = -1
     UID_ADDRESS = {
         # No unique id for these parts
-        "F0": UID_NOT_SUPPORTED,
+        "F0": None,
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E8,
@@ -200,6 +199,11 @@ class Stm32Bootloader:
     }
 
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
+
+    # Part does not support unique ID feature
+    UID_NOT_SUPPORTED = 0
+    # stm32loader does not know the address for the unique ID
+    UID_ADDRESS_UNKNOWN = -1
 
     FLASH_SIZE_ADDRESS = {
         # ST RM0360 section 27.1 Memory size data register
@@ -327,23 +331,27 @@ class Stm32Bootloader:
         return flash_size
 
     def get_uid(self, device_id):
-        """Send the 'Get UID' command and return the device UID."""
-        uid_address = self.UID_ADDRESS[device_id]
-        if uid_address == self.UID_NOT_SUPPORTED:
-            return self.UID_NOT_SUPPORTED
+        """Send the 'Get UID' command and return the device UID if the address for UID is known."""
+        uid_address = self.UID_ADDRESS.get(device_id, self.UID_ADDRESS_UNKNOWN)
+        if uid_address is None:
+            uid = self.UID_NOT_SUPPORTED
+        elif uid_address == self.UID_ADDRESS_UNKNOWN:
+            uid = self.UID_ADDRESS_UNKNOWN
         else:
             uid = self.read_memory(uid_address, 12)
-            return uid
+        return uid
 
-    @staticmethod
-    def format_uid(uid):
+    @classmethod
+    def format_uid(self, uid):
         """Return a readable string from the given UID."""
-        if uid == -1:
-            return "UID Not Supported"
+        if uid == self.UID_NOT_SUPPORTED:
+            uid_string = "UID not supported in this part"
+        elif uid == self.UID_ADDRESS_UNKNOWN:
+            uid_string = "UID address unknown"
         else:
             swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
             uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
-            return uid_string
+        return uid_string
 
     def read_memory(self, address, length):
         """
