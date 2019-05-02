@@ -33,6 +33,7 @@ CHIP_IDS = {
     # see ST AN2606 Table 116 Bootloader device-dependent parameters
     # 16 to 32 KiB
     0x412: "STM32F10x Low-density",
+    0x444: "STM32F03xx4/6",
     # 64 to 128 KiB
     0x410: "STM32F10x Medium-density",
     0x420: "STM32F10x Medium-density value line",
@@ -185,6 +186,8 @@ class Stm32Bootloader:
         NACK = 0x1F
 
     UID_ADDRESS = {
+        # No unique id for these parts
+        "F0": None,
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E8,
@@ -197,7 +200,15 @@ class Stm32Bootloader:
 
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
 
+    # Part does not support unique ID feature
+    UID_NOT_SUPPORTED = 0
+    # stm32loader does not know the address for the unique ID
+    UID_ADDRESS_UNKNOWN = -1
+
     FLASH_SIZE_ADDRESS = {
+        # ST RM0360 section 27.1 Memory size data register
+        # F030x4/x6/x8/xC, F070x6/xB
+        "F0": 0x1FFFF7CC,
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E0,
@@ -320,14 +331,36 @@ class Stm32Bootloader:
         return flash_size
 
     def get_uid(self, device_id):
-        """Send the 'Get UID' command and return the device UID."""
-        uid_address = self.UID_ADDRESS[device_id]
+        """
+        Send the 'Get UID' command and return the device UID.
+
+        Return UID_NOT_SUPPORTED if the device does not have
+        a UID.
+        Return UIT_ADDRESS_UNKNOWN if the address of the device's
+        UID is not known.
+
+        :param str device_id: Device family name such as "F1".
+          See UID_ADDRESS.
+        :return byterary: UID bytes of the device, or 0 or -1 when
+          not available.
+        """
+        uid_address = self.UID_ADDRESS.get(device_id, self.UID_ADDRESS_UNKNOWN)
+        if uid_address is None:
+            return self.UID_NOT_SUPPORTED
+        if uid_address == self.UID_ADDRESS_UNKNOWN:
+            return self.UID_ADDRESS_UNKNOWN
+
         uid = self.read_memory(uid_address, 12)
         return uid
 
-    @staticmethod
-    def format_uid(uid):
+    @classmethod
+    def format_uid(cls, uid):
         """Return a readable string from the given UID."""
+        if uid == cls.UID_NOT_SUPPORTED:
+            return "UID not supported in this part"
+        if uid == cls.UID_ADDRESS_UNKNOWN:
+            return "UID address unknown"
+
         swapped_data = [[uid[b] for b in part] for part in Stm32Bootloader.UID_SWAP]
         uid_string = "-".join("".join(format(b, "02X") for b in part) for part in swapped_data)
         return uid_string

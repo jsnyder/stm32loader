@@ -185,3 +185,35 @@ def test_verify_data_with_different_byte_count_raises_verify_error_complaining_a
 def test_verify_data_with_non_identical_data_raises_verify_error_complaining_about_mismatched_byte():
     with pytest.raises(Stm32.DataMismatchError, match=r"Verification data does not match read data.*mismatch.*0x1.*0x6.*0x7"):
         Stm32Bootloader.verify_data(b'\x05\x06', b'\x05\x07')
+
+
+@pytest.mark.parametrize(
+    "family", ["F1", "F4", "F7"],
+)
+def test_get_uid_for_known_family_reads_at_correct_address(bootloader, family):
+    bootloader.read_memory = MagicMock()
+    bootloader.get_uid("F1")
+    uid_address = bootloader.UID_ADDRESS[family]
+    assert bootloader.read_memory.called_once_with(uid_address)
+
+
+def test_get_uid_for_family_without_uid_returns_uid_not_supported(bootloader):
+    assert bootloader.UID_NOT_SUPPORTED == bootloader.get_uid("F0")
+
+
+def test_get_uid_for_unknown_family_returns_uid_address_unknown(bootloader):
+    assert bootloader.UID_ADDRESS_UNKNOWN == bootloader.get_uid("X")
+
+
+@pytest.mark.parametrize(
+    "uid_string",
+    [
+        (0, "UID not supported in this part"),
+        (-1, "UID address unknown"),
+        (b'\x12\x34\x56\x78\x9a\xbc\xde\x01\x12\x34\x56\x78', "3412-7856-01DEBC9A-78563412"),
+    ],
+)
+def test_format_uid_returns_correct_string(bootloader, uid_string):
+    uid, expected_description = uid_string
+    description = bootloader.format_uid(uid)
+    assert description == expected_description
