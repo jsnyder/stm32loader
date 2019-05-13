@@ -243,8 +243,6 @@ class Stm32Bootloader:
            Set to None to disable progress bar output.
         """
         self.connection = connection
-        self._toggle_reset = getattr(connection, "can_toggle_reset", False)
-        self._toggle_boot0 = getattr(connection, "can_toggle_boot0", False)
         self.verbosity = verbosity
         self.show_progress = show_progress or ShowProgress(None)
         self.extended_erase = False
@@ -624,7 +622,7 @@ class Stm32Bootloader:
 
     def _reset(self):
         """Enable or disable the reset IO line (if possible)."""
-        if not self._toggle_reset:
+        if not hasattr(self.connection, "enable_reset"):
             return
         self.connection.enable_reset(True)
         time.sleep(0.1)
@@ -633,7 +631,7 @@ class Stm32Bootloader:
 
     def _enable_boot0(self, enable=True):
         """Enable or disable the boot0 IO line (if possible)."""
-        if not self._toggle_boot0:
+        if not hasattr(self.connection, "enable_boot0"):
             return
 
         self.connection.enable_boot0(enable)
