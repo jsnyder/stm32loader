@@ -23,7 +23,7 @@ Handle RS-232 serial communication through pyserial.
 Offer support for toggling RESET and BOOT0.
 """
 
-# not naming this file itself 'serial', becase that name-clashes in Python 2
+# not naming this file itself 'serial', because that name-clashes in Python 2
 import serial
 
 
