@@ -49,6 +49,22 @@ class SerialConnection:
         # call connect() to establish connection
         self.serial_connection = None
 
+        self._timeout = None
+
+        # assigned using setter methods
+        self.timeout = 5
+
+    @property
+    def timeout(self):
+        """Get timeout."""
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, timeout):
+        """Set timeout."""
+        self._timeout = timeout
+        self.serial_connection.timeout = timeout
+
     def connect(self):
         """Connect to the RS-232 serial port."""
         self.serial_connection = serial.Serial(
@@ -63,7 +79,7 @@ class SerialConnection:
             # don't enable RTS/CTS flow control
             rtscts=0,
             # set a timeout value, None for waiting forever
-            timeout=5,
+            timeout=self._timeout,
         )
 
     def write(self, *args, **kwargs):
