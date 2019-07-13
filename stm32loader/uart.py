@@ -26,10 +26,9 @@ Offer support for toggling RESET and BOOT0.
 # not naming this file itself 'serial', becase that name-clashes in Python 2
 import serial
 
-
 # fixes the problem with setters methods
 # https://stackoverflow.com/questions/598077/why-does-foo-setter-in-python-not-work-for-me
-class SerialConnection(object)
+class SerialConnection(object):
     """Wrap a serial.Serial connection and toggle reset and boot0."""
 
     # pylint: disable=too-many-instance-attributes
