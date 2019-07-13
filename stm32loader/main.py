@@ -48,7 +48,7 @@ class Stm32Loader:
         "-s": "swap_rts_dtr",
         "-n": "hide_progress_bar",
         "-R": "reset_active_high",
-        "-B": "boot0_active_high",
+        "-B": "boot0_active_low",
     }
 
     INTEGER_OPTIONS = {"-b": "baud", "-a": "address", "-g": "go_address", "-l": "length"}
@@ -70,7 +70,7 @@ class Stm32Loader:
             "go_address": -1,
             "swap_rts_dtr": False,
             "reset_active_high": False,
-            "boot0_active_high": False,
+            "boot0_active_low": False,
             "hide_progress_bar": False,
             "data_file": None,
         }
@@ -134,7 +134,7 @@ class Stm32Loader:
 
         serial_connection.swap_rts_dtr = self.configuration["swap_rts_dtr"]
         serial_connection.reset_active_high = self.configuration["reset_active_high"]
-        serial_connection.boot0_active_high = self.configuration["boot0_active_high"]
+        serial_connection.boot0_active_low = self.configuration["boot0_active_low"]
 
         show_progress = self._get_progress_bar(self.configuration["hide_progress_bar"])
 
@@ -228,7 +228,7 @@ class Stm32Loader:
 
     -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
     -R          Make reset active high
-    -B          Make boot0 active high
+    -B          Make boot0 active low
     -u          Readout unprotect
     -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG

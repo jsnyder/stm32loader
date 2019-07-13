@@ -27,7 +27,9 @@ Offer support for toggling RESET and BOOT0.
 import serial
 
 
-class SerialConnection:
+# fixes the problem with setters methods
+# https://stackoverflow.com/questions/598077/why-does-foo-setter-in-python-not-work-for-me
+class SerialConnection(object)
     """Wrap a serial.Serial connection and toggle reset and boot0."""
 
     # pylint: disable=too-many-instance-attributes
@@ -44,15 +46,12 @@ class SerialConnection:
 
         self.swap_rts_dtr = False
         self.reset_active_high = False
-        self.boot0_active_high = False
+        self.boot0_active_low = False
 
         # call connect() to establish connection
         self.serial_connection = None
 
-        self._timeout = None
-
-        # assigned using setter methods
-        self.timeout = 5
+        self._timeout = 5
 
     @property
     def timeout(self):
@@ -109,8 +108,8 @@ class SerialConnection:
         """Enable or disable the boot0 IO line."""
         level = int(enable)
 
-        # by default, this is active low
-        if not self.boot0_active_high:
+        # by default, this is active high
+        if not self.boot0_active_low:
             level = 1 - level
 
         if self.swap_rts_dtr:
