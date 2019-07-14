@@ -45,7 +45,7 @@ CHIP_IDS = {
     # flash size to be looked up
     0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
     0x411: "STM32F2xxx",
-    0x433: "STM32F4xxDE",
+    0x433: "STM32F4xxD/E",
     # RM0090 in ( 38.6.1 MCU device ID code )
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
@@ -335,6 +335,16 @@ class Stm32Bootloader:
         flash_size_bytes = self.read_memory(flash_size_address, 2)
         flash_size = flash_size_bytes[0] + (flash_size_bytes[1]<<8)
         return flash_size
+
+    def get_flash_size_and_uid_f4(self):
+        """ Return device_uid and flash_size for F4 family."""
+        data_start_addr = 0x1FFF7A00
+        flash_size_lsb_addr = 0x22
+        uid_lsb_addr = 0x10
+        data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
+        device_uid = data[uid_lsb_addr:uid_lsb_addr+12] 
+        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr+1]<<8
+        return device_uid, flash_size
 
     def get_uid(self, device_id):
         """
