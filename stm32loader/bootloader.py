@@ -337,14 +337,21 @@ class Stm32Bootloader:
         return flash_size
 
     def get_flash_size_and_uid_f4(self):
-        """ Return device_uid and flash_size for F4 family."""
+        """
+        Return device_uid and flash_size for F4 family.
+
+        For some reason, F4 (at least, NUCLEO F401RE) can't read the 12 or 2
+        bytes for UID and flash size directly.
+        Reading a whole chunk of 256 bytes at 0x1FFFA700 does work and
+        requires some data extraction.
+        """
         data_start_addr = 0x1FFF7A00
         flash_size_lsb_addr = 0x22
         uid_lsb_addr = 0x10
         data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
         device_uid = data[uid_lsb_addr:uid_lsb_addr+12] 
         flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr+1]<<8
-        return device_uid, flash_size
+        return flash_size, device_uid
 
     def get_uid(self, device_id):
         """
