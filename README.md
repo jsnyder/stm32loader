@@ -52,7 +52,8 @@ Example
 stm32loader.py -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
 ```
 
-This will pre-erase flash, write `somefile.bin` to the flash on the device, and then perform a verification after writing is finished.
+This will pre-erase flash, write `somefile.bin` to the flash on the device, and then
+perform a verification after writing is finished.
 
 You can skip the `-p` option by configuring environment variable
 `STM32LOADER_SERIAL_PORT`.
@@ -72,7 +73,7 @@ Acknowledgement
 
 Original Version by Ivan A-R (tuxotronic.org).
 Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
-Atokulus, sam-bristow, NINI1988, Omer Kilic.
+Atokulus, sam-bristow, NINI1988, Omer Kilic, byq77.
 
 Inspiration for features from:
 
