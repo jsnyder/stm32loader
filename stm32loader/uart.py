@@ -23,7 +23,7 @@ Handle RS-232 serial communication through pyserial.
 Offer support for toggling RESET and BOOT0.
 """
 
-# not naming this file itself 'serial', becase that name-clashes in Python 2
+# not naming this file itself 'serial', because that name-clashes in Python 2
 import serial
 
 
@@ -41,15 +41,11 @@ class SerialConnection(object):
         self.baud_rate = baud_rate
         self.parity = parity
 
-        # advertise reset / boot0 toggle capability
-        self.can_toggle_reset = True
-        self.can_toggle_boot0 = True
-
         self.swap_rts_dtr = False
         self.reset_active_high = False
         self.boot0_active_low = False
 
-        # call connect() to establish connection
+        # don't connect yet; caller should use connect() separately
         self.serial_connection = None
 
         self._timeout = 5
@@ -66,7 +62,7 @@ class SerialConnection(object):
         self.serial_connection.timeout = timeout
 
     def connect(self):
-        """Connect to the RS-232 serial port."""
+        """Connect to the UART serial port."""
         self.serial_connection = serial.Serial(
             port=self.serial_port,
             baudrate=self.baud_rate,
@@ -93,9 +89,9 @@ class SerialConnection(object):
     def enable_reset(self, enable=True):
         """Enable or disable the reset IO line."""
         # reset on the STM32 is active low (0 Volt puts the MCU in reset)
-        # but the RS-232 DTR signal is active low by itself, so it
-        # inverts this (writing a logical 1 outputs a low voltage, i.e.
-        # enables reset)
+        # but the RS-232 modem control DTR and RTS signals are active low
+        # themselves, so these get inverted -- writing a logical 1 outputs
+        # a low voltage, i.e. enables reset)
         level = int(enable)
         if self.reset_active_high:
             level = 1 - level
