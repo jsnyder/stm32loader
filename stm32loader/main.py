@@ -240,38 +240,36 @@ class Stm32Loader:
         help_text = help_text % (current_script, current_script, current_script)
         print(help_text)
 
-    def read_device_details(self):
-        """Show MCU details (bootloader version, chip ID, UID, flash size)."""
+    def read_device_id(self):
+        """Show chip ID and bootloader version."""
         boot_version = self.stm32.get()
         self.debug(0, "Bootloader version: 0x%X" % boot_version)
         device_id = self.stm32.get_id()
         self.debug(
             0, "Chip id: 0x%X (%s)" % (device_id, bootloader.CHIP_IDS.get(device_id, "Unknown"))
         )
+
+    def read_device_uid(self):
+        """Show chip UID and flash size."""
         family = self.configuration["family"]
         if not family:
             self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
-        else:
-            # special fix for F4 devices
-            if family == "F4":
-                try:
-                    device_uid, flash_size = self.stm32.get_flash_size_and_uid_f4()
-                except bootloader.CommandError as e:
-                    self.debug(0,"Something was wrong with reading chip family data: " + e.message)
-                else:
-                    device_uid_string = self.stm32.format_uid(device_uid)
-                    self.debug(0, "Device UID: %s" % device_uid_string)
-                    self.debug(0, "Flash size: %d KiB" % flash_size)
+            return
+
+        try:
+            if family != "F4":
+                flash_size = self.stm32.get_flash_size(family)
+                device_uid = self.stm32.get_uid(family)
             else:
-                try:
-                    flash_size = self.stm32.get_flash_size(family)
-                    device_uid = self.stm32.get_uid(family)
-                except bootloader.CommandError as e:
-                    self.debug(0,"Something was wrong with reading chip family data: " + e.message)
-                else:
-                    device_uid_string = self.stm32.format_uid(device_uid)
-                    self.debug(0, "Device UID: %s" % device_uid_string)
-                    self.debug(0, "Flash size: %d KiB" % flash_size)
+                # special fix for F4 devices
+                flash_size, device_uid = self.stm32.get_flash_size_and_uid_f4()
+        except bootloader.CommandError as e:
+            self.debug(0, "Something was wrong with reading chip family data: " + e.message)
+            return
+
+        device_uid_string = self.stm32.format_uid(device_uid)
+        self.debug(0, "Device UID: %s" % device_uid_string)
+        self.debug(0, "Flash size: %d KiB" % flash_size)
 
     def _parse_option_flags(self, options):
         # pylint: disable=eval-used
@@ -328,7 +326,8 @@ def main(*args, **kwargs):
         loader.parse_arguments(args)
         loader.connect()
         try:
-            loader.read_device_details()
+            loader.read_device_id()
+            loader.read_device_uid()
             loader.perform_commands()
         finally:
             loader.reset()
