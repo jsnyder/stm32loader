@@ -48,7 +48,7 @@ class Stm32Loader:
         "-s": "swap_rts_dtr",
         "-n": "hide_progress_bar",
         "-R": "reset_active_high",
-        "-B": "boot0_active_high",
+        "-B": "boot0_active_low",
     }
 
     INTEGER_OPTIONS = {"-b": "baud", "-a": "address", "-g": "go_address", "-l": "length"}
@@ -70,7 +70,7 @@ class Stm32Loader:
             "go_address": -1,
             "swap_rts_dtr": False,
             "reset_active_high": False,
-            "boot0_active_high": False,
+            "boot0_active_low": False,
             "hide_progress_bar": False,
             "data_file": None,
         }
@@ -134,7 +134,7 @@ class Stm32Loader:
 
         serial_connection.swap_rts_dtr = self.configuration["swap_rts_dtr"]
         serial_connection.reset_active_high = self.configuration["reset_active_high"]
-        serial_connection.boot0_active_high = self.configuration["boot0_active_high"]
+        serial_connection.boot0_active_low = self.configuration["boot0_active_low"]
 
         show_progress = self._get_progress_bar(self.configuration["hide_progress_bar"])
 
@@ -228,7 +228,7 @@ class Stm32Loader:
 
     -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
     -R          Make reset active high
-    -B          Make boot0 active high
+    -B          Make boot0 active low
     -u          Readout unprotect
     -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
@@ -243,21 +243,35 @@ class Stm32Loader:
     def read_device_details(self):
         """Show MCU details (bootloader version, chip ID, UID, flash size)."""
         boot_version = self.stm32.get()
-        self.debug(0, "Bootloader version %X" % boot_version)
+        self.debug(0, "Bootloader version: 0x%X" % boot_version)
         device_id = self.stm32.get_id()
         self.debug(
-            0, "Chip id: 0x%x (%s)" % (device_id, bootloader.CHIP_IDS.get(device_id, "Unknown"))
+            0, "Chip id: 0x%X (%s)" % (device_id, bootloader.CHIP_IDS.get(device_id, "Unknown"))
         )
         family = self.configuration["family"]
         if not family:
             self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
         else:
-            device_uid = self.stm32.get_uid(family)
-            device_uid_string = self.stm32.format_uid(device_uid)
-            self.debug(0, "Device UID: %s" % device_uid_string)
-
-            flash_size = self.stm32.get_flash_size(family)
-            self.debug(0, "Flash size: %d KiB" % flash_size)
+            # special fix for F4 devices
+            if family == "F4":
+                try:
+                    device_uid, flash_size = self.stm32.get_flash_size_and_uid_f4()
+                except bootloader.CommandError as e:
+                    self.debug(0,"Something was wrong with reading chip family data: " + e.message)
+                else:
+                    device_uid_string = self.stm32.format_uid(device_uid)
+                    self.debug(0, "Device UID: %s" % device_uid_string)
+                    self.debug(0, "Flash size: %d KiB" % flash_size)
+            else:
+                try:
+                    flash_size = self.stm32.get_flash_size(family)
+                    device_uid = self.stm32.get_uid(family)
+                except bootloader.CommandError as e:
+                    self.debug(0,"Something was wrong with reading chip family data: " + e.message)
+                else:
+                    device_uid_string = self.stm32.format_uid(device_uid)
+                    self.debug(0, "Device UID: %s" % device_uid_string)
+                    self.debug(0, "Flash size: %d KiB" % flash_size)
 
     def _parse_option_flags(self, options):
         # pylint: disable=eval-used

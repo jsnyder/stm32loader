@@ -45,8 +45,10 @@ CHIP_IDS = {
     # flash size to be looked up
     0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
     0x411: "STM32F2xxx",
-    0x413: "STM32F40xxx/41xxx",
-    0x419: "STM3242xxx/43xxx",
+    0x433: "STM32F4xxD/E",
+    # RM0090 in ( 38.6.1 MCU device ID code )
+    0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
+    0x419: "STM32F42xxx and STM32F43xxx",
     0x449: "STM32F74xxx/75xxx",
     0x451: "STM32F76xxx/77xxx",
     # see ST AN4872
@@ -193,7 +195,7 @@ class Stm32Bootloader:
         "F1": 0x1FFFF7E8,
         # ST RM0090 section 39.1 Unique device ID register
         # F405/415, F407/417, F427/437, F429/439
-        "F4": 0x1FFFF7A10,
+        "F4": 0x1FFF7A10,
         # ST RM0385 section 41.2 Unique device ID register
         "F7": 0x1FF0F420,
     }
@@ -308,10 +310,14 @@ class Stm32Bootloader:
         Read protection status readout is not yet implemented.
         """
         self.command(self.Command.GET_VERSION, "Get version")
-        version = bytearray(self.connection.read())[0]
-        self.connection.read(2)
+        data = bytearray(self.connection.read(3))
+        version = data[0]
+        option_byte1 = data[1]
+        option_byte2 = data[2]
         self._wait_for_ack("0x01 end")
         self.debug(10, "    Bootloader version: " + hex(version))
+        self.debug(10, "    Option byte 1: " + hex(option_byte1))
+        self.debug(10, "    Option byte 2: " + hex(option_byte2))
         return version
 
     def get_id(self):
@@ -327,8 +333,18 @@ class Stm32Bootloader:
         """Return the MCU's flash size in bytes."""
         flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
-        flash_size = flash_size_bytes[0] + flash_size_bytes[1] * self.DATA_TRANSFER_SIZE
+        flash_size = flash_size_bytes[0] + (flash_size_bytes[1]<<8)
         return flash_size
+
+    def get_flash_size_and_uid_f4(self):
+        """ Return device_uid and flash_size for F4 family."""
+        data_start_addr = 0x1FFF7A00
+        flash_size_lsb_addr = 0x22
+        uid_lsb_addr = 0x10
+        data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
+        device_uid = data[uid_lsb_addr:uid_lsb_addr+12] 
+        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr+1]<<8
+        return device_uid, flash_size
 
     def get_uid(self, device_id):
         """
@@ -349,7 +365,7 @@ class Stm32Bootloader:
             return self.UID_NOT_SUPPORTED
         if uid_address == self.UID_ADDRESS_UNKNOWN:
             return self.UID_ADDRESS_UNKNOWN
-
+            
         uid = self.read_memory(uid_address, 12)
         return uid
 

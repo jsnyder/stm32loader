@@ -26,8 +26,9 @@ Offer support for toggling RESET and BOOT0.
 # not naming this file itself 'serial', becase that name-clashes in Python 2
 import serial
 
-
-class SerialConnection:
+# fixes the problem with setters methods
+# https://stackoverflow.com/questions/598077/why-does-foo-setter-in-python-not-work-for-me
+class SerialConnection(object):
     """Wrap a serial.Serial connection and toggle reset and boot0."""
 
     # pylint: disable=too-many-instance-attributes
@@ -44,10 +45,23 @@ class SerialConnection:
 
         self.swap_rts_dtr = False
         self.reset_active_high = False
-        self.boot0_active_high = False
+        self.boot0_active_low = False
 
         # call connect() to establish connection
         self.serial_connection = None
+
+        self._timeout = 5
+
+    @property
+    def timeout(self):
+        """Get timeout."""
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, timeout):
+        """Set timeout."""
+        self._timeout = timeout
+        self.serial_connection.timeout = timeout
 
     def connect(self):
         """Connect to the RS-232 serial port."""
@@ -63,7 +77,7 @@ class SerialConnection:
             # don't enable RTS/CTS flow control
             rtscts=0,
             # set a timeout value, None for waiting forever
-            timeout=5,
+            timeout=self._timeout,
         )
 
     def write(self, *args, **kwargs):
@@ -93,8 +107,8 @@ class SerialConnection:
         """Enable or disable the boot0 IO line."""
         level = int(enable)
 
-        # by default, this is active low
-        if not self.boot0_active_high:
+        # by default, this is active high
+        if not self.boot0_active_low:
             level = 1 - level
 
         if self.swap_rts_dtr:

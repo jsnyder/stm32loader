@@ -38,7 +38,7 @@ Usage
 
     -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
     -R          Make reset active high
-    -B          Make boot0 active high
+    -B          Make boot0 active low
     -u          Readout unprotect
     -n          No progress: don't show progress bar
     -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
