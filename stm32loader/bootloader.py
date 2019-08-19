@@ -49,6 +49,7 @@ CHIP_IDS = {
     # RM0090 in ( 38.6.1 MCU device ID code )
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
+    0x435: "STM32L4xx",
     0x449: "STM32F74xxx/75xxx",
     0x451: "STM32F76xxx/77xxx",
     # see ST AN4872
@@ -198,6 +199,8 @@ class Stm32Bootloader:
         "F4": 0x1FFF7A10,
         # ST RM0385 section 41.2 Unique device ID register
         "F7": 0x1FF0F420,
+        # ST RM0394
+        'L4': 0x1FFF7590,
     }
 
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
@@ -219,6 +222,8 @@ class Stm32Bootloader:
         "F4": 0x1FFF7A22,
         # ST RM0385 section 41.2 Flash size
         "F7": 0x1FF0F442,
+        # ST RM0394
+        'L4': 0x1FFF75E0,
     }
 
     DATA_TRANSFER_SIZE = 256  # bytes
