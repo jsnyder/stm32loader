@@ -270,7 +270,23 @@ class Stm32Bootloader:
         """Reset the MCU with boot0 enabled to enter the bootloader."""
         self._enable_boot0(True)
         self._reset()
-        return self.write_and_ack("Synchro", self.Command.SYNCHRONIZE)
+
+        # Try the 0x7F synchronize that selects UART in bootloader (see ST application notes AN3155 and AN2606).
+        # If we are right after reset, it returns ACK, otherwise first time nothing, then NACK
+        # This is not documented in STM32 docs fully, but ST official tools use the same algorithm.
+        # Likely artifact/side effect of each command being 2-byte and having xor of bytes equal to 0xFF.
+
+        for attempt in range(2):
+            self.write(self.Command.SYNCHRONIZE)
+            read_data = bytearray(self.connection.read())
+
+            if read_data:
+                reply = read_data[0]
+                if reply in (self.Reply.ACK, self.Reply.NACK):
+                    return ""
+            print("Activation of bootloader timeouted, retrying", file=sys.stderr)
+
+        raise CommandError("Bad reply from bootloader")
 
     def reset_from_flash(self):
         """Reset the MCU with boot0 disabled."""

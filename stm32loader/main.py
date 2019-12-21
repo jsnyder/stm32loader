@@ -143,6 +143,7 @@ class Stm32Loader:
         )
 
         try:
+            print("Sending UART select to bootloader, attempting twice")
             self.stm32.reset_from_system_memory()
         except bootloader.CommandError:
             print(
