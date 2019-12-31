@@ -224,6 +224,8 @@ class Stm32Bootloader:
     DATA_TRANSFER_SIZE = 256  # bytes
     FLASH_PAGE_SIZE = 1024  # bytes
 
+    SYNCHRONIZE_ATTEMPTS = 2
+
     def __init__(self, connection, verbosity=5, show_progress=None):
         """
         Construct the Stm32Bootloader object.
@@ -271,21 +273,26 @@ class Stm32Bootloader:
         self._enable_boot0(True)
         self._reset()
 
-        # Try the 0x7F synchronize that selects UART in bootloader (see ST application notes AN3155 and AN2606).
-        # If we are right after reset, it returns ACK, otherwise first time nothing, then NACK
-        # This is not documented in STM32 docs fully, but ST official tools use the same algorithm.
-        # Likely artifact/side effect of each command being 2-byte and having xor of bytes equal to 0xFF.
+        # Try the 0x7F synchronize that selects UART in bootloader mode
+        # (see ST application notes AN3155 and AN2606).
+        # If we are right after reset, it returns ACK, otherwise first
+        # time nothing, then NACK.
+        # This is not documented in STM32 docs fully, but ST official
+        # tools use the same algorithm.
+        # This is likely an artifact/side effect of each command being
+        # 2-bytes and having xor of bytes equal to 0xFF.
 
-        for attempt in range(2):
+        for attempt in range(self.SYNCHRONIZE_ATTEMPTS):
+            if attempt:
+                print("Bootloader activation timeout -- retrying", file=sys.stderr)
             self.write(self.Command.SYNCHRONIZE)
             read_data = bytearray(self.connection.read())
 
-            if read_data:
-                reply = read_data[0]
-                if reply in (self.Reply.ACK, self.Reply.NACK):
-                    return ""
-            print("Activation of bootloader timeouted, retrying", file=sys.stderr)
+            if read_data and read_data[0] in (self.Reply.ACK, self.Reply.NACK):
+                # success
+                return
 
+        # not successful
         raise CommandError("Bad reply from bootloader")
 
     def reset_from_flash(self):
