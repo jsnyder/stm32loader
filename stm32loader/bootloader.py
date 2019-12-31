@@ -30,7 +30,7 @@ import time
 from functools import reduce
 
 CHIP_IDS = {
-    # see ST AN2606 Table 116 Bootloader device-dependent parameters
+    # see ST AN2606 Table 136 Bootloader device-dependent parameters
     # 16 to 32 KiB
     0x412: "STM32F10x Low-density",
     0x444: "STM32F03xx4/6",
@@ -46,6 +46,12 @@ CHIP_IDS = {
     0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
     0x411: "STM32F2xxx",
     0x433: "STM32F4xxD/E",
+    # STM32F3
+    0x432: "STM32F373xx/378xx",
+    0x422: "STM32F302xB(C)/303xB(C)/358xx",
+    0x439: "STM32F301xx/302x4(6/8)/318xx",
+    0x438: "STM32F303x4(6/8)/334xx/328xx",
+    0x446: "STM32F302xD(E)/303xD(E)/398xx",
     # RM0090 in ( 38.6.1 MCU device ID code )
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
@@ -64,6 +70,7 @@ CHIP_IDS = {
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
+
 }
 
 
@@ -199,6 +206,12 @@ class Stm32Bootloader:
         # ST RM0008 section 30.1 Unique device ID register
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E8,
+        # ST RM0366 section 29.1 Unique device ID register
+        # ST RM0365 section 34.1 Unique device ID register
+        # ST RM0316 section 34.1 Unique device ID register
+        # ST RM0313 section 32.1 Unique device ID register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 0x1FFFF7AC,
         # ST RM0090 section 39.1 Unique device ID register
         # F405/415, F407/417, F427/437, F429/439
         "F4": 0x1FFF7A10,
@@ -222,6 +235,12 @@ class Stm32Bootloader:
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
         "F1": 0x1FFFF7E0,
+        # ST RM0366 section 29.2 Memory size data register
+        # ST RM0365 section 34.2 Memory size data register
+        # ST RM0316 section 34.2 Memory size data register
+        # ST RM0313 section 32.2 Flash memory size data register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 0x1FFFF7CC,
         # ST RM0090 section 39.2 Flash size
         # F405/415, F407/417, F427/437, F429/439
         "F4": 0x1FFF7A22,
