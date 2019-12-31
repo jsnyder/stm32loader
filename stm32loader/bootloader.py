@@ -56,7 +56,11 @@ CHIP_IDS = {
     # see ST AN4872
     # requires parity None
     0x11103: "BlueNRG",
-    # other
+    # STM32F0 RM0091 Table 136. DEV_ID and REV_ID field values
+    0x440: "STM32F030x8",
+    0x445: "STM32F070x6",
+    0x448: "STM32F070xB",
+    0x442: "STM32F030xC",
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
