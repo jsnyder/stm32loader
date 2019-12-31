@@ -79,7 +79,8 @@ Acknowledgement
 
 Original Version by Ivan A-R (tuxotronic.org).
 Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
-Atokulus, sam-bristow, NINI1988, Omer Kilic, byq77.
+Atokulus, sam-bristow, NINI1988, Omer Kilic, Szymon Szantula, rdaforno,
+Mikolaj Stawiski, Tyler Coy, Alex Klimaj, Ondrej Mikle.
 
 Inspiration for features from:
 
