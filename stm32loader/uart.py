@@ -27,7 +27,7 @@ Offer support for toggling RESET and BOOT0.
 import serial
 
 
-class SerialConnection(object):
+class SerialConnection(object):  # pylint: disable=useless-object-inheritance
     """Wrap a serial.Serial connection and toggle reset and boot0."""
 
     # Note: inheriting from object is required for Python2 setters

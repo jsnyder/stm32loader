@@ -71,7 +71,6 @@ CHIP_IDS = {
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
-
 }
 
 
@@ -219,7 +218,7 @@ class Stm32Bootloader:
         # ST RM0385 section 41.2 Unique device ID register
         "F7": 0x1FF0F420,
         # ST RM0394 47.1 Unique device ID register (96 bits)
-        'L4': 0x1FFF7590,
+        "L4": 0x1FFF7590,
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 0x1FFF7590,
     }
@@ -250,7 +249,7 @@ class Stm32Bootloader:
         # ST RM0385 section 41.2 Flash size
         "F7": 0x1FF0F442,
         # ST RM0394
-        'L4': 0x1FFF75E0,
+        "L4": 0x1FFF75E0,
         # ST RM0444 section 38.2 Flash memory size data register
         "G0": 0x1FFF75E0,
     }
