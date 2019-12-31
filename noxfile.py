@@ -5,7 +5,7 @@ from shutil import rmtree
 import nox
 
 
-@nox.session(python=["2.7", "3.4", "3.5", "3.6", "3.7"])
+@nox.session(python=["2.7", "3.4", "3.5", "3.6", "3.7", "3.8"])
 def tests(session):
     """
     Install stm32loader package and execute unit tests.
