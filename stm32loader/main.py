@@ -27,6 +27,7 @@ import getopt
 import os
 import sys
 
+from stm32loader import __version__
 from . import bootloader
 from .uart import SerialConnection
 
@@ -209,7 +210,8 @@ class Stm32Loader:
     @staticmethod
     def print_usage():
         """Print help text explaining the command-line arguments."""
-        help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
+        help_text = """%s version %s
+Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
           [-a address] [-g address] [-f family] [file.bin]
     -e          Erase (note: this is required on previously written memory)
     -u          Unprotect in case erase fails
@@ -238,7 +240,7 @@ class Stm32Loader:
     Example: ./%s -e -w -v example/main.bin
 """
         current_script = sys.argv[0] if sys.argv else "stm32loader"
-        help_text = help_text % (current_script, current_script, current_script)
+        help_text = help_text % (current_script, __version__, current_script, current_script, current_script)
         print(help_text)
 
     def read_device_id(self):
