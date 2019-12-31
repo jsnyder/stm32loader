@@ -27,6 +27,7 @@ import getopt
 import os
 import sys
 
+from stm32loader import __version__
 from . import bootloader
 from .uart import SerialConnection
 
@@ -85,7 +86,7 @@ class Stm32Loader:
         """Parse the list of command-line arguments."""
         try:
             # parse command-line arguments using getopt
-            options, arguments = getopt.getopt(arguments, "hqVeuwvrsnRBP:p:b:a:l:g:f:", ["help"])
+            options, arguments = getopt.getopt(arguments, "hqVeuwvrsnRBP:p:b:a:l:g:f:", ["help", "version"])
         except getopt.GetoptError as err:
             # print help information and exit:
             # this prints something like "option -a not recognized"
@@ -209,8 +210,10 @@ class Stm32Loader:
     @staticmethod
     def print_usage():
         """Print help text explaining the command-line arguments."""
-        help_text = """Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
+        help_text = """%s version %s
+Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
           [-a address] [-g address] [-f family] [file.bin]
+    --version   Show version number and exit
     -e          Erase (note: this is required on previously written memory)
     -u          Unprotect in case erase fails
     -w          Write file content to flash
@@ -223,7 +226,7 @@ class Stm32Loader:
     -g address  Start executing from address (0x08000000, usually)
     -f family   Device family to read out device UID and flash size; e.g F1 for STM32F1xx
 
-    -h          Print this help text
+    -h --help   Print this help text
     -q          Quiet mode
     -V          Verbose mode
 
@@ -238,7 +241,7 @@ class Stm32Loader:
     Example: ./%s -e -w -v example/main.bin
 """
         current_script = sys.argv[0] if sys.argv else "stm32loader"
-        help_text = help_text % (current_script, current_script, current_script)
+        help_text = help_text % (current_script, __version__, current_script, current_script, current_script)
         print(help_text)
 
     def read_device_id(self):
@@ -281,6 +284,9 @@ class Stm32Loader:
                 self.verbosity = 0
             elif option in ["-h", "--help"]:
                 self.print_usage()
+                sys.exit(0)
+            elif option == "--version":
+                print(__version__)
                 sys.exit(0)
             elif option == "-p":
                 self.configuration["port"] = value
