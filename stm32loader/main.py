@@ -27,9 +27,8 @@ import getopt
 import os
 import sys
 
-from stm32loader import __version__
-from . import bootloader
-from .uart import SerialConnection
+from stm32loader import __version__, bootloader
+from stm32loader.uart import SerialConnection
 
 DEFAULT_VERBOSITY = 5
 
@@ -86,7 +85,9 @@ class Stm32Loader:
         """Parse the list of command-line arguments."""
         try:
             # parse command-line arguments using getopt
-            options, arguments = getopt.getopt(arguments, "hqVeuwvrsnRBP:p:b:a:l:g:f:", ["help", "version"])
+            options, arguments = getopt.getopt(
+                arguments, "hqVeuwvrsnRBP:p:b:a:l:g:f:", ["help", "version"]
+            )
         except getopt.GetoptError as err:
             # print help information and exit:
             # this prints something like "option -a not recognized"
@@ -131,7 +132,7 @@ class Stm32Loader:
                 "  -p /dev/tty.usbserial-ftCYPMYJ\n",
                 file=sys.stderr,
             )
-            exit(1)
+            sys.exit(1)
 
         serial_connection.swap_rts_dtr = self.configuration["swap_rts_dtr"]
         serial_connection.reset_active_high = self.configuration["reset_active_high"]
@@ -241,7 +242,13 @@ Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
     Example: ./%s -e -w -v example/main.bin
 """
         current_script = sys.argv[0] if sys.argv else "stm32loader"
-        help_text = help_text % (current_script, __version__, current_script, current_script, current_script)
+        help_text = help_text % (
+            current_script,
+            __version__,
+            current_script,
+            current_script,
+            current_script,
+        )
         print(help_text)
 
     def read_device_id(self):
@@ -268,7 +275,9 @@ Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
                 # special fix for F4 devices
                 flash_size, device_uid = self.stm32.get_flash_size_and_uid_f4()
         except bootloader.CommandError as e:
-            self.debug(0, "Something was wrong with reading chip family data: " + e.message)
+            self.debug(
+                0, "Something was wrong with reading chip family data: " + str(e),
+            )
             return
 
         device_uid_string = self.stm32.format_uid(device_uid)
@@ -310,7 +319,9 @@ Usage: %s [-hqVeuwvrsRB] [-l length] [-p port] [-b baud] [-P parity]
             return None
         desired_progress_bar = None
         try:
-            from progress.bar import ChargingBar as desired_progress_bar
+            from progress.bar import (  # pylint: disable=import-outside-toplevel
+                ChargingBar as desired_progress_bar,
+            )
         except ImportError:
             # progress module is a package dependency,
             # but not strictly required
