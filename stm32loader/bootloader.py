@@ -331,7 +331,7 @@ class Stm32Bootloader:
         """Return the MCU's flash size in bytes."""
         flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
-        flash_size = flash_size_bytes[0] + (flash_size_bytes[1]<<8)
+        flash_size = flash_size_bytes[0] + (flash_size_bytes[1] << 8)
         return flash_size
 
     def get_flash_size_and_uid_f4(self):
@@ -347,8 +347,8 @@ class Stm32Bootloader:
         flash_size_lsb_addr = 0x22
         uid_lsb_addr = 0x10
         data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
-        device_uid = data[uid_lsb_addr:uid_lsb_addr+12] 
-        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr+1]<<8
+        device_uid = data[uid_lsb_addr : uid_lsb_addr + 12]
+        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr + 1] << 8
         return flash_size, device_uid
 
     def get_uid(self, device_id):
@@ -370,7 +370,7 @@ class Stm32Bootloader:
             return self.UID_NOT_SUPPORTED
         if uid_address == self.UID_ADDRESS_UNKNOWN:
             return self.UID_ADDRESS_UNKNOWN
-            
+
         uid = self.read_memory(uid_address, 12)
         return uid
 
