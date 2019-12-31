@@ -59,6 +59,12 @@ You can skip the `-p` option by configuring environment variable
 `STM32LOADER_SERIAL_PORT`.
 Similarly, `-f` may be supplied through `STM32LOADER_FAMILY`.
 
+To read out firmware and store it in a file:
+
+```
+stm32loader.py -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump.bin 
+```
+
 
 Reference documents
 -------------------
