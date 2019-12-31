@@ -49,9 +49,10 @@ CHIP_IDS = {
     # RM0090 in ( 38.6.1 MCU device ID code )
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
-    0x435: "STM32L4xx",
     0x449: "STM32F74xxx/75xxx",
     0x451: "STM32F76xxx/77xxx",
+    # RM0394 46.6.1 MCU device ID code
+    0x435: "STM32L4xx",
     # see ST AN4872
     # requires parity None
     0x11103: "BlueNRG",
@@ -199,7 +200,7 @@ class Stm32Bootloader:
         "F4": 0x1FFF7A10,
         # ST RM0385 section 41.2 Unique device ID register
         "F7": 0x1FF0F420,
-        # ST RM0394
+        # ST RM0394 47.1 Unique device ID register (96 bits)
         'L4': 0x1FFF7590,
     }
 
