@@ -19,7 +19,8 @@ Usage
 -----
 
 ```
-./stm32loader.py [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
+./stm32loader [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
+    --version   Show version number and exit
     -e          Erase (note: this is required on previously written memory)
     -u          Readout unprotect
     -w          Write file content to flash
