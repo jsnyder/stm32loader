@@ -50,7 +50,7 @@ Example
 -------
 
 ```
-stm32loader.py -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
+stm32loader -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
 ```
 
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then
@@ -63,7 +63,7 @@ Similarly, `-f` may be supplied through `STM32LOADER_FAMILY`.
 To read out firmware and store it in a file:
 
 ```
-stm32loader.py -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump.bin 
+stm32loader -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump.bin 
 ```
 
 
