@@ -21,9 +21,7 @@ matrix:
       sudo: required  # necessary for Python 3.8?
 
     # Test using nox on non-native Python version 3.6
-    # (nox does not natively run on 2.7 / 3.4)
-    - python: "3.6"
-      env: NOXSESSION="tests-2.7"
+    # (nox does not natively run on 3.4)
     - python: "3.6"
       env: NOXSESSION="tests-3.4"
 

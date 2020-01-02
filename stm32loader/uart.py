@@ -23,15 +23,12 @@ Handle RS-232 serial communication through pyserial.
 Offer support for toggling RESET and BOOT0.
 """
 
-# not naming this file itself 'serial', because that name-clashes in Python 2
+# This file not named 'serial' because that name-clashed in Python 2
 import serial
 
 
-class SerialConnection(object):  # pylint: disable=useless-object-inheritance
+class SerialConnection:
     """Wrap a serial.Serial connection and toggle reset and boot0."""
-
-    # Note: inheriting from object is required for Python2 setters
-    # https://stackoverflow.com/questions/598077/why-does-foo-setter-in-python-not-work-for-me
 
     # pylint: disable=too-many-instance-attributes
 

@@ -16,7 +16,7 @@ DESCRIPTION = 'Flash firmware to STM32 microcontrollers using Python.'
 URL = 'https://github.com/florisla/stm32loader'
 EMAIL = 'florisla@gmail.com'
 AUTHOR = 'Floris Lambrechts'
-REQUIRES_PYTHON = '>=2.7.0'
+REQUIRES_PYTHON = '>=3.4.0'
 PROJECT_URLS = {
     "Bug Tracker": "https://github.com/florisla/stm32loader/issues",
     "Source Code": "https://github.com/florisla/stm32loader",
@@ -63,8 +63,6 @@ setup(
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

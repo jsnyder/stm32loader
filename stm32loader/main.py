@@ -21,8 +21,6 @@
 """Flash firmware to STM32 microcontrollers over a serial connection."""
 
 
-from __future__ import print_function
-
 import getopt
 import os
 import sys

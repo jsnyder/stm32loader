@@ -5,7 +5,7 @@ from shutil import rmtree
 import nox
 
 
-@nox.session(python=["2.7", "3.4", "3.5", "3.6", "3.7", "3.8"])
+@nox.session(python=["3.4", "3.5", "3.6", "3.7", "3.8"])
 def tests(session):
     """
     Install stm32loader package and execute unit tests.
@@ -19,8 +19,6 @@ def tests(session):
     rmtree("./dist", ignore_errors=True)
     session.install(".")
     session.install("pytest")
-    if session.python == "2.7":
-        session.install("mock")
     session.chdir("tests")
     session.run("pytest", "./")
 
