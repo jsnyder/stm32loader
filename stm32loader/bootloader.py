@@ -20,8 +20,6 @@
 """Talk to an STM32 native bootloader (see ST AN3155)."""
 
 
-from __future__ import print_function
-
 import math
 import operator
 import struct
@@ -291,8 +289,8 @@ class Stm32Bootloader:
 
     def write_and_ack(self, message, *data):
         """Write data to the MCU and wait until it replies with ACK."""
-        # this is a separate method from write() because a keyword
-        # argument after *args is not possible in Python 2
+        # Note: this is a separate method from write() because a keyword
+        # argument after *args was not possible in Python 2
         self.write(*data)
         return self._wait_for_ack(message)
 

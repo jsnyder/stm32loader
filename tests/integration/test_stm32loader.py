@@ -121,7 +121,6 @@ def test_erase_resets_memory_to_all_ones(stm32loader, dump_file):
     stm32loader("-e")
     # read all bytes and check if they're 0xFF
     stm32loader("-r", "-l", "1024", dump_file)
-    # bytearray() is required for Python 2
     read_data = bytearray(open(dump_file, "rb").read())
     assert all(byte == 0xFF for byte in read_data)
 
