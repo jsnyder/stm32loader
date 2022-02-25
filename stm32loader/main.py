@@ -21,11 +21,16 @@
 """Flash firmware to STM32 microcontrollers over a serial connection."""
 
 
-import os
-import sys
-import copy
 import argparse
 import atexit
+import copy
+import os
+import sys
+
+try:
+    from progress.bar import ChargingBar as progress_bar
+except ImportError:
+    progress_bar = None
 
 from stm32loader import __version__, bootloader
 from stm32loader.uart import SerialConnection
@@ -33,10 +38,9 @@ from stm32loader.uart import SerialConnection
 DEFAULT_VERBOSITY = 5
 
 
-class HelpFormatter(
-    argparse.RawDescriptionHelpFormatter,
-    argparse.ArgumentDefaultsHelpFormatter
-):
+class HelpFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    """Custom help formatter -- don't print confusing default values."""
+
     def _get_help_string(self, action):
         action = copy.copy(action)
         # Don't show "(default: None)" for arguments without defaults,
@@ -54,7 +58,9 @@ class HelpFormatter(
             if action.dest == "port":
                 action.required = True
             return action
+
         return super()._format_actions_usage(map(tweak_action, actions), groups)
+
 
 class Stm32Loader:
     """Main application: parse arguments and handle commands."""
@@ -75,97 +81,139 @@ class Stm32Loader:
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
         parser = argparse.ArgumentParser(
-            epilog='\n'.join([
-                'examples:',
-                '  %(prog)s -p COM7 -f F1',
-                '  %(prog)s -e -w -v example/main.bin',
-            ]),
-            formatter_class=HelpFormatter)
+            epilog="\n".join(
+                [
+                    "examples:",
+                    "  %(prog)s -p COM7 -f F1",
+                    "  %(prog)s -e -w -v example/main.bin",
+                ]
+            ),
+            formatter_class=HelpFormatter,
+        )
 
         data_file_arg = parser.add_argument(
-            "data_file", metavar="FILE.BIN", type=str, nargs="?",
-            help="file to read from or store to flash")
+            "data_file",
+            metavar="FILE.BIN",
+            type=str,
+            nargs="?",
+            help="file to read from or store to flash",
+        )
 
         parser.add_argument(
-            "-e", "--erase", action="store_true",
-            help="erase (note: this is required on previously written memory)")
+            "-e",
+            "--erase",
+            action="store_true",
+            help="erase (note: this is required on previously written memory)",
+        )
 
         parser.add_argument(
-            "-u", "--unprotect", action="store_true",
-            help="unprotect in case erase fails")
+            "-u", "--unprotect", action="store_true", help="unprotect in case erase fails"
+        )
 
         parser.add_argument(
-            "-w", "--write", action="store_true",
-            help="write file content to flash")
+            "-w", "--write", action="store_true", help="write file content to flash"
+        )
 
         parser.add_argument(
-            "-v", "--verify", action="store_true",
-            help="verify flash content versus local file (recommended)")
+            "-v",
+            "--verify",
+            action="store_true",
+            help="verify flash content versus local file (recommended)",
+        )
 
         parser.add_argument(
-            "-r", "--read", action="store_true",
-            help="read from flash and store in local file")
+            "-r", "--read", action="store_true", help="read from flash and store in local file"
+        )
 
         length_arg = parser.add_argument(
-            "-l", "--length", action="store", type=int,
-            help="length of read")
+            "-l", "--length", action="store", type=int, help="length of read"
+        )
 
         default_port = os.environ.get("STM32LOADER_SERIAL_PORT")
         port_arg = parser.add_argument(
-            "-p", "--port", action="store", type=str, # morally required=True
+            "-p",
+            "--port",
+            action="store",
+            type=str,  # morally required=True
             default=default_port,
-            help="serial port" +
-                ("" if default_port else " (default: $STM32LOADER_SERIAL_PORT)"))
+            help=(
+                "serial port" + ("" if default_port else " (default: $STM32LOADER_SERIAL_PORT)")
+            ),
+        )
 
         parser.add_argument(
-            "-b", "--baud", action="store", type=int, default=115200,
-            help="baudrate")
+            "-b", "--baud", action="store", type=int, default=115200, help="baudrate"
+        )
 
         address_arg = parser.add_argument(
-            "-a", "--address", action="store", type=int, default=0x08000000,
-            help="target address")
+            "-a", "--address", action="store", type=int, default=0x08000000, help="target address"
+        )
 
         parser.add_argument(
-            "-g", "--go-address", action="store", type=int, metavar="ADDRESS",
-            help="start executing from address (0x08000000, usually)")
+            "-g",
+            "--go-address",
+            action="store",
+            type=int,
+            metavar="ADDRESS",
+            help="start executing from address (0x08000000, usually)",
+        )
 
         default_family = os.environ.get("STM32LOADER_FAMILY")
         parser.add_argument(
-            "-f", "--family", action="store", type=str,
+            "-f",
+            "--family",
+            action="store",
+            type=str,
             default=default_family,
-            help="device family to read out device UID and flash size; "
-                "e.g F1 for STM32F1xx" +
-                ("" if default_family else " (default: $STM32LOADER_FAMILY)"))
+            help=(
+                "device family to read out device UID and flash size; "
+                "e.g F1 for STM32F1xx"
+                + ("" if default_family else " (default: $STM32LOADER_FAMILY)")
+            ),
+        )
 
         parser.add_argument(
-            "-V", "--verbose", dest="verbosity", action="store_const", const=10,
+            "-V",
+            "--verbose",
+            dest="verbosity",
+            action="store_const",
+            const=10,
             default=DEFAULT_VERBOSITY,
-            help="verbose mode")
+            help="verbose mode",
+        )
 
         parser.add_argument(
-            "-q", "--quiet", dest="verbosity", action="store_const", const=0,
-            help="quiet mode")
+            "-q", "--quiet", dest="verbosity", action="store_const", const=0, help="quiet mode"
+        )
 
         parser.add_argument(
-            "-s", "--swap-rts-dtr", action="store_true",
-            help="swap RTS and DTR: use RTS for reset and DTR for boot0")
+            "-s",
+            "--swap-rts-dtr",
+            action="store_true",
+            help="swap RTS and DTR: use RTS for reset and DTR for boot0",
+        )
 
         parser.add_argument(
-            "-R", "--reset-active-high", action="store_true",
-            help="make reset active high")
+            "-R", "--reset-active-high", action="store_true", help="make reset active high"
+        )
 
         parser.add_argument(
-            "-B", "--boot0-active-low", action="store_true",
-            help="make boot0 active low")
+            "-B", "--boot0-active-low", action="store_true", help="make boot0 active low"
+        )
 
         parser.add_argument(
-            "-n", "--no-progress", action="store_true",
-            help="don't show progress bar")
+            "-n", "--no-progress", action="store_true", help="don't show progress bar"
+        )
 
         parser.add_argument(
-            "-P", "--parity", action="store", type=str, default="even",
+            "-P",
+            "--parity",
+            action="store",
+            type=str,
+            default="even",
             choices=self.PARITY.keys(),
-            help='parity: "even" for STM32, "none" for BlueNRG')
+            help='parity: "even" for STM32, "none" for BlueNRG',
+        )
 
         parser.add_argument("--version", action="version", version=__version__)
 
@@ -186,11 +234,13 @@ class Stm32Loader:
 
         if not self.configuration.port:
             port_arg.required = True
-            atexit.register(lambda: print(
-                "{}: note: you can also set the environment "
-                "variable STM32LOADER_SERIAL_PORT".format(parser.prog),
-                file=sys.stderr,
-            ))
+            atexit.register(
+                lambda: print(
+                    "{}: note: you can also set the environment "
+                    "variable STM32LOADER_SERIAL_PORT".format(parser.prog),
+                    file=sys.stderr,
+                )
+            )
 
         if self.configuration.read or self.configuration.write or self.configuration.verify:
             data_file_arg.nargs = None
@@ -237,9 +287,7 @@ class Stm32Loader:
         show_progress = self._get_progress_bar(self.configuration.no_progress)
 
         self.stm32 = bootloader.Stm32Bootloader(
-            serial_connection,
-            verbosity=self.configuration.verbosity,
-            show_progress=show_progress
+            serial_connection, verbosity=self.configuration.verbosity, show_progress=show_progress
         )
 
         try:
@@ -284,9 +332,7 @@ class Stm32Loader:
         if self.configuration.write:
             self.stm32.write_memory_data(self.configuration.address, binary_data)
         if self.configuration.verify:
-            read_data = self.stm32.read_memory_data(
-                self.configuration.address, len(binary_data)
-            )
+            read_data = self.stm32.read_memory_data(self.configuration.address, len(binary_data))
             try:
                 bootloader.Stm32Bootloader.verify_data(read_data, binary_data)
                 print("Verification OK")
@@ -331,7 +377,8 @@ class Stm32Loader:
                 flash_size, device_uid = self.stm32.get_flash_size_and_uid_f4()
         except bootloader.CommandError as e:
             self.debug(
-                0, "Something was wrong with reading chip family data: " + str(e),
+                0,
+                "Something was wrong with reading chip family data: " + str(e),
             )
             return
 
@@ -341,22 +388,10 @@ class Stm32Loader:
 
     @staticmethod
     def _get_progress_bar(no_progress=False):
-        if no_progress:
-            return None
-        desired_progress_bar = None
-        try:
-            from progress.bar import (  # pylint: disable=import-outside-toplevel
-                ChargingBar as desired_progress_bar,
-            )
-        except ImportError:
-            # progress module is a package dependency,
-            # but not strictly required
-            pass
-
-        if not desired_progress_bar:
+        if no_progress or not progress_bar:
             return None
 
-        return bootloader.ShowProgress(desired_progress_bar)
+        return bootloader.ShowProgress(progress_bar)
 
 
 def main(*args, **kwargs):

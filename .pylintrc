@@ -3,8 +3,9 @@ max-line-length=98
 
 [MESSAGES CONTROL]
 disable=
-    fixme,               # TO DOs are not errors
-    bad-continuation,    # be compatible to black
+    fixme,                    # TO DOs are not errors.
+    consider-using-f-string,  # We're not on Python >= 3.6 yet.
+    bad-continuation,         # Be compatible to black.
 
 [REPORT]
 score=no
