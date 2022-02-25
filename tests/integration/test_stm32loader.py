@@ -53,29 +53,12 @@ def test_stm32loader_is_executable():
     subprocess.call(["stm32loader", "--help"])
 
 
-@pytest.mark.parametrize(
-    "help_argument", ["-h", "--help"],
-)
-def test_argument_h_prints_help_info(help_argument, capsys):
-    main(help_argument, avoid_system_exit=True)
-    captured = capsys.readouterr()
-    assert "Example:" in captured.out
-
-
 def test_unexisting_serial_port_prints_readable_error(capsys):
     main("-p", "COM108", avoid_system_exit=True)
     captured = capsys.readouterr()
     assert "could not open port " in captured.err
     assert ("port 'COM108'" in captured.err or "port COM108" in captured.err)
     assert "Is the device connected and powered correctly?" in captured.err
-
-
-def test_missing_argument_p_prints_readable_error(capsys):
-    main(avoid_system_exit=True)
-    captured = capsys.readouterr()
-    assert "No serial port configured" in captured.err
-    assert "Supply the -p option" in captured.err
-    assert "environment variable STM32LOADER_SERIAL_PORT" in captured.err
 
 
 def test_env_var_stm32loader_serial_port_defines_port(capsys):
