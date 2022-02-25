@@ -19,30 +19,49 @@ Usage
 -----
 
 ```
-./stm32loader [-hqVewvrsRB] [-l length] [-p port] [-b baud] [-P parity] [-a address] [-g address] [-f family] [file.bin]
-    --version   Show version number and exit
-    -e          Erase (note: this is required on previously written memory)
-    -u          Readout unprotect
-    -w          Write file content to flash
-    -v          Verify flash content versus local file (recommended)
-    -r          Read from flash and store in local file
-    -l length   Length of read
-    -p port     Serial port (default: /dev/tty.usbserial-ftCYPMYJ)
-    -b baud     Baud speed (default: 115200)
-    -a address  Target address (default: 0x08000000)
-    -g address  Start executing from address (0x08000000, usually)
-    -f family   Device family to read out device UID and flash size; e.g F1 for STM32F1xx
+usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD]
+                   [-a ADDRESS] [-g ADDRESS] [-f FAMILY] [-V] [-q] [-s] [-R]
+                   [-B] [-n] [-P {even,none}] [--version]
+                   [FILE.BIN]
 
-    -h          Print this help text
-    -q          Quiet mode
-    -V          Verbose mode
+positional arguments:
+  FILE.BIN              file to read from or store to flash
 
-    -s          Swap RTS and DTR: use RTS for reset and DTR for boot0
-    -R          Make reset active high
-    -B          Make boot0 active low
-    -u          Readout unprotect
-    -n          No progress: don't show progress bar
-    -P parity   Parity: "even" for STM32 (default), "none" for BlueNRG
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --erase           erase (note: this is required on previously written
+                        memory)
+  -u, --unprotect       unprotect in case erase fails
+  -w, --write           write file content to flash
+  -v, --verify          verify flash content versus local file (recommended)
+  -r, --read            read from flash and store in local file
+  -l LENGTH, --length LENGTH
+                        length of read
+  -p PORT, --port PORT  serial port (default: $STM32LOADER_SERIAL_PORT)
+  -b BAUD, --baud BAUD  baudrate (default: 115200)
+  -a ADDRESS, --address ADDRESS
+                        target address (default: 134217728)
+  -g ADDRESS, --go-address ADDRESS
+                        start executing from address (0x08000000, usually)
+  -f FAMILY, --family FAMILY
+                        device family to read out device UID and flash size;
+                        e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY)
+  -V, --verbose         verbose mode
+  -q, --quiet           quiet mode
+  -s, --swap-rts-dtr    swap RTS and DTR: use RTS for reset and DTR for boot0
+  -R, --reset-active-high
+                        make reset active high
+  -B, --boot0-active-low
+                        make boot0 active low
+  -n, --no-progress     don't show progress bar
+  -P {even,none}, --parity {even,none}
+                        parity: "even" for STM32, "none" for BlueNRG (default:
+                        even)
+  --version             show program's version number and exit
+
+examples:
+  stm32loader -p COM7 -f F1
+  stm32loader -e -w -v example/main.bin
 ```
 
 
