@@ -55,6 +55,7 @@ CHIP_IDS = {
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
     0x449: "STM32F74xxx/75xxx",
+    0x450: "STM32H76xxx/77xxx",
     0x451: "STM32F76xxx/77xxx",
     # RM0394 46.6.1 MCU device ID code
     0x435: "STM32L4xx",
@@ -215,6 +216,8 @@ class Stm32Bootloader:
         "F4": 0x1FFF7A10,
         # ST RM0385 section 41.2 Unique device ID register
         "F7": 0x1FF0F420,
+        # ST RM0433 section 61.1 Unique device ID register
+        "H7": 0x1FF1E800,
         # ST RM0394 47.1 Unique device ID register (96 bits)
         "L4": 0x1FFF7590,
         # ST RM0444 section 38.1 Unique device ID register
@@ -246,6 +249,8 @@ class Stm32Bootloader:
         "F4": 0x1FFF7A22,
         # ST RM0385 section 41.2 Flash size
         "F7": 0x1FF0F442,
+        # ST RM0433 61.2 Flash size
+        "H7": 0x1FF1E880,
         # ST RM0394
         "L4": 0x1FFF75E0,
         # ST RM0444 section 38.2 Flash memory size data register
