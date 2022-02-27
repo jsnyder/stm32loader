@@ -5,7 +5,11 @@ from shutil import rmtree
 import nox
 
 
-@nox.session(python=["3.4", "3.5", "3.6", "3.7", "3.8"])
+DEFAULT_PYTHON_VERSION = "3.9"
+ALL_PYTHON_VERSIONS = ["3.6", "3.7", "3.8", "3.9", "3.10"]
+
+
+@nox.session(python=ALL_PYTHON_VERSIONS)
 def tests(session):
     """
     Install stm32loader package and execute unit tests.
@@ -23,7 +27,7 @@ def tests(session):
     session.run("pytest", "./")
 
 
-@nox.session(python=["3.6"])
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def lint(session):
     """
     Run code verification tools flake8, pylint and black.

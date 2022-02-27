@@ -16,7 +16,7 @@ DESCRIPTION = 'Flash firmware to STM32 microcontrollers using Python.'
 URL = 'https://github.com/florisla/stm32loader'
 EMAIL = 'florisla@gmail.com'
 AUTHOR = 'Floris Lambrechts'
-REQUIRES_PYTHON = '>=3.4.0'
+REQUIRES_PYTHON = '>=3.6.0'
 PROJECT_URLS = {
     "Bug Tracker": "https://github.com/florisla/stm32loader/issues",
     "Source Code": "https://github.com/florisla/stm32loader",
@@ -28,7 +28,7 @@ REQUIRED = [
 ]
 
 EXTRAS = {
-    "dev": ['setuptools', 'wheel', 'twine', 'pylint', 'flake8', 'flake8-isort', 'black', 'bump2version'],
+    "dev": ['setuptools', 'wheel', 'twine', 'pylint', 'flake8', 'flake8-isort', 'black', 'bump2version', 'nox'],
 }
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -64,11 +64,11 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Natural Language :: English',
