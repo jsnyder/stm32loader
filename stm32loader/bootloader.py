@@ -583,6 +583,12 @@ class Stm32Bootloader:
             return
 
         self.command(self.Command.ERASE, "Erase memory")
+
+        if not pages and self.device_family == "L0":
+            # Special case: L0 erase should do each page separately.
+            flash_size, _uid = self.get_flash_size_and_uid()
+            page_count = (flash_size * 1024) // self.flash_page_size
+            pages = range(page_count - 1)
         if pages:
             # page erase, see ST AN3155
             if len(pages) > 255:
