@@ -110,3 +110,7 @@ class SerialConnection:
             self.serial_connection.setDTR(level)
         else:
             self.serial_connection.setRTS(level)
+
+    def flush_imput_buffer(self):
+        """Flush the input buffer to remove any stale read data."""
+        self.serial_connection.reset_input_buffer()

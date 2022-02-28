@@ -309,6 +309,12 @@ class Stm32Bootloader:
         self._enable_boot0(True)
         self._reset()
 
+        # Flush the input buffer to avoid reading old data.
+        # It's known that the CP2102N at high baudrate fails to flush
+        # its buffer when the port is opened.
+        if hasattr(self.connection, "flush_input_buffer"):
+            self.connection.flush_input_buffer()
+
         # Try the 0x7F synchronize that selects UART in bootloader mode
         # (see ST application notes AN3155 and AN2606).
         # If we are right after reset, it returns ACK, otherwise first
