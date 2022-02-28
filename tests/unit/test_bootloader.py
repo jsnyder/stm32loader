@@ -190,19 +190,22 @@ def test_verify_data_with_non_identical_data_raises_verify_error_complaining_abo
 @pytest.mark.parametrize(
     "family", ["F1", "F4", "F7"],
 )
-def test_get_uid_for_known_family_reads_at_correct_address(bootloader, family):
+def test_get_uid_for_known_family_reads_at_correct_address(connection, family):
+    bootloader = Stm32Bootloader(connection, device_family=family)
     bootloader.read_memory = MagicMock()
-    bootloader.get_uid("F1")
+    bootloader.get_uid()
     uid_address = bootloader.UID_ADDRESS[family]
     assert bootloader.read_memory.called_once_with(uid_address)
 
 
-def test_get_uid_for_family_without_uid_returns_uid_not_supported(bootloader):
-    assert bootloader.UID_NOT_SUPPORTED == bootloader.get_uid("F0")
+def test_get_uid_for_family_without_uid_returns_uid_not_supported(connection):
+    bootloader = Stm32Bootloader(connection, device_family="F0")
+    assert bootloader.UID_NOT_SUPPORTED == bootloader.get_uid()
 
 
-def test_get_uid_for_unknown_family_returns_uid_address_unknown(bootloader):
-    assert bootloader.UID_ADDRESS_UNKNOWN == bootloader.get_uid("X")
+def test_get_uid_for_unknown_family_returns_uid_address_unknown(connection):
+    bootloader = Stm32Bootloader(connection, device_family="X")
+    assert bootloader.UID_ADDRESS_UNKNOWN == bootloader.get_uid()
 
 
 @pytest.mark.parametrize(

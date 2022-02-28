@@ -42,6 +42,7 @@ CHIP_IDS = {
     # 768 to 1024 KiB
     0x430: "STM3210xx XL-density",
     # flash size to be looked up
+    0x417: "STM32L05xxx/06xxx",
     0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
     0x411: "STM32F2xxx",
     0x433: "STM32F4xxD/E",
@@ -220,6 +221,8 @@ class Stm32Bootloader:
         "H7": 0x1FF1E800,
         # ST RM0394 47.1 Unique device ID register (96 bits)
         "L4": 0x1FFF7590,
+        # ST RM0451 25.2 Unique device ID register (96 bits)
+        "L0": 0x1FF80050,
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 0x1FFF7590,
     }
@@ -253,16 +256,68 @@ class Stm32Bootloader:
         "H7": 0x1FF1E880,
         # ST RM0394
         "L4": 0x1FFF75E0,
+        # ST RM4510 25.1 Memory size register
+        "L0": 0x1FF8007C,
         # ST RM0444 section 38.2 Flash memory size data register
         "G0": 0x1FFF75E0,
     }
 
-    DATA_TRANSFER_SIZE = 256  # bytes
-    FLASH_PAGE_SIZE = 1024  # bytes
+    DATA_TRANSFER_SIZE = {
+        "default": 256,
+        # No unique id for these parts
+        "F0": 256,  # bytes
+        # ST RM0008 section 30.1 Unique device ID register
+        # F101, F102, F103, F105, F107
+        "F1": 256,  # bytes
+        # ST RM0366 section 29.1 Unique device ID register
+        # ST RM0365 section 34.1 Unique device ID register
+        # ST RM0316 section 34.1 Unique device ID register
+        # ST RM0313 section 32.1 Unique device ID register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 256,  # bytes
+        # ST RM0090 section 39.1 Unique device ID register
+        # F405/415, F407/417, F427/437, F429/439
+        "F4": 256,  # bytes
+        # ST RM0385 section 41.2 Unique device ID register
+        "F7": 256,  # bytes
+        # ST RM0394 47.1 Unique device ID register (96 bits)
+        "L4": 256,  # bytes
+        # ST RM0451 25.2 Unique device ID register (96 bits)
+        "L0": 128,  # bytes
+        # ST RM0444 section 38.1 Unique device ID register
+        "G0": 256,  # bytes
+    }
+
+    FLASH_PAGE_SIZE = {
+        "default": 1024,
+        # ST RM0360 section 27.1 Memory size data register
+        # F030x4/x6/x8/xC, F070x6/xB
+        "F0": 1024,  # bytes
+        # ST RM0008 section 30.2 Memory size registers
+        # F101, F102, F103, F105, F107
+        "F1": 1024,  # bytes
+        # ST RM0366 section 29.2 Memory size data register
+        # ST RM0365 section 34.2 Memory size data register
+        # ST RM0316 section 34.2 Memory size data register
+        # ST RM0313 section 32.2 Flash memory size data register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 2048,  # bytes
+        # ST RM0090 section 39.2 Flash size
+        # F405/415, F407/417, F427/437, F429/439
+        "F4": 1024,  # bytes
+        # ST RM0385 section 41.2 Flash size
+        "F7": 1024,  # bytes
+        # ST RM0394
+        "L4": 1024,  # bytes
+        # ST RM4510 25.1 Memory size register
+        "L0": 128,  # bytes
+        # ST RM0444 section 38.2 Flash memory size data register
+        "G0": 1024,  # bytes
+    }
 
     SYNCHRONIZE_ATTEMPTS = 2
 
-    def __init__(self, connection, verbosity=5, show_progress=None):
+    def __init__(self, connection, device_family=None, verbosity=5, show_progress=None):
         """
         Construct the Stm32Bootloader object.
 
@@ -284,6 +339,9 @@ class Stm32Bootloader:
         self.verbosity = verbosity
         self.show_progress = show_progress or ShowProgress(None)
         self.extended_erase = False
+        self.data_transfer_size = self.DATA_TRANSFER_SIZE.get(device_family or "default")
+        self.flash_page_size = self.FLASH_PAGE_SIZE.get(device_family or "default")
+        self.device_family = device_family or "F1"
 
     def write(self, *data):
         """Write the given data to the MCU."""
@@ -392,31 +450,45 @@ class Stm32Bootloader:
         _device_id = reduce(lambda x, y: x * 0x100 + y, id_data)
         return _device_id
 
-    def get_flash_size(self, device_family):
+    def get_flash_size(self):
         """Return the MCU's flash size in bytes."""
-        flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
+        flash_size_address = self.FLASH_SIZE_ADDRESS[self.device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
         flash_size = flash_size_bytes[0] + (flash_size_bytes[1] << 8)
         return flash_size
 
-    def get_flash_size_and_uid_f4(self):
+    def get_flash_size_and_uid(self):
         """
-        Return device_uid and flash_size for F4 family.
+        Return device_uid and flash_size for L0 and F4 family devices.
 
         For some reason, F4 (at least, NUCLEO F401RE) can't read the 12 or 2
         bytes for UID and flash size directly.
         Reading a whole chunk of 256 bytes at 0x1FFFA700 does work and
         requires some data extraction.
         """
-        data_start_addr = 0x1FFF7A00
-        flash_size_lsb_addr = 0x22
-        uid_lsb_addr = 0x10
-        data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
-        device_uid = data[uid_lsb_addr : uid_lsb_addr + 12]
-        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr + 1] << 8
+        flash_size_address = self.FLASH_SIZE_ADDRESS[self.device_family]
+        uid_address = self.UID_ADDRESS.get(self.device_family)
+
+        if uid_address is None:
+            return None, None
+
+        data_start_address = uid_address & 0xFFFFFF00
+        flash_size_lsb_address = flash_size_address - data_start_address
+        uid_lsb_address = uid_address - data_start_address
+
+        self.debug(10, "flash_size_address = 0x%X" % flash_size_address)
+        self.debug(10, "uid_address = 0x%X" % uid_address)
+        # self.debug(10, 'data_start_address =0x%X' % data_start_address)
+        # self.debug(10, 'flashsizelsbaddress =0x%X' % flash_size_lsb_address)
+        # self.debug(10, 'uid_lsb_address = 0x%X' % uid_lsb_address)
+
+        data = self.read_memory(data_start_address, self.data_transfer_size)
+        device_uid = data[uid_lsb_address : uid_lsb_address + 12]
+        flash_size = data[flash_size_lsb_address] + (data[flash_size_lsb_address + 1] << 8)
+
         return flash_size, device_uid
 
-    def get_uid(self, device_id):
+    def get_uid(self):
         """
         Send the 'Get UID' command and return the device UID.
 
@@ -425,12 +497,10 @@ class Stm32Bootloader:
         Return UIT_ADDRESS_UNKNOWN if the address of the device's
         UID is not known.
 
-        :param str device_id: Device family name such as "F1".
-          See UID_ADDRESS.
         :return byterary: UID bytes of the device, or 0 or -1 when
           not available.
         """
-        uid_address = self.UID_ADDRESS.get(device_id, self.UID_ADDRESS_UNKNOWN)
+        uid_address = self.UID_ADDRESS.get(self.device_family, self.UID_ADDRESS_UNKNOWN)
         if uid_address is None:
             return self.UID_NOT_SUPPORTED
         if uid_address == self.UID_ADDRESS_UNKNOWN:
@@ -457,7 +527,7 @@ class Stm32Bootloader:
 
         Supports maximum 256 bytes.
         """
-        if length > self.DATA_TRANSFER_SIZE:
+        if length > self.data_transfer_size:
             raise DataLengthError("Can not read more than 256 bytes at once.")
         self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
@@ -481,7 +551,7 @@ class Stm32Bootloader:
         nr_of_bytes = len(data)
         if nr_of_bytes == 0:
             return
-        if nr_of_bytes > self.DATA_TRANSFER_SIZE:
+        if nr_of_bytes > self.data_transfer_size:
             raise DataLengthError("Can not write more than 256 bytes at once.")
         self.command(self.Command.WRITE_MEMORY, "Write memory")
         self.write_and_ack("0x31 address failed", self._encode_address(address))
@@ -513,6 +583,12 @@ class Stm32Bootloader:
             return
 
         self.command(self.Command.ERASE, "Erase memory")
+
+        if not pages and self.device_family == "L0":
+            # Special case: L0 erase should do each page separately.
+            flash_size, _uid = self.get_flash_size_and_uid()
+            page_count = (flash_size * 1024) // self.flash_page_size
+            pages = range(page_count - 1)
         if pages:
             # page erase, see ST AN3155
             if len(pages) > 255:
@@ -614,11 +690,11 @@ class Stm32Bootloader:
         Length may be more than 256 bytes.
         """
         data = bytearray()
-        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
+        chunk_count = int(math.ceil(length / float(self.data_transfer_size)))
         self.debug(5, "Read %d chunks at address 0x%X..." % (chunk_count, address))
         with self.show_progress("Reading", maximum=chunk_count) as progress_bar:
             while length:
-                read_length = min(length, self.DATA_TRANSFER_SIZE)
+                read_length = min(length, self.data_transfer_size)
                 self.debug(
                     10,
                     "Read %(len)d bytes at 0x%(address)X"
@@ -637,13 +713,13 @@ class Stm32Bootloader:
         Data length may be more than 256 bytes.
         """
         length = len(data)
-        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
+        chunk_count = int(math.ceil(length / float(self.data_transfer_size)))
         offset = 0
         self.debug(5, "Write %d chunks at address 0x%X..." % (chunk_count, address))
 
         with self.show_progress("Writing", maximum=chunk_count) as progress_bar:
             while length:
-                write_length = min(length, self.DATA_TRANSFER_SIZE)
+                write_length = min(length, self.data_transfer_size)
                 self.debug(
                     10,
                     "Write %(len)d bytes at 0x%(address)X"
