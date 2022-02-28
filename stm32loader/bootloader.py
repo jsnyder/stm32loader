@@ -262,8 +262,58 @@ class Stm32Bootloader:
         "G0": 0x1FFF75E0,
     }
 
-    DATA_TRANSFER_SIZE = 256  # bytes
-    FLASH_PAGE_SIZE = 1024  # bytes
+    DATA_TRANSFER_SIZE = {
+        "default": 256,
+        # No unique id for these parts
+        "F0": 256,  # bytes
+        # ST RM0008 section 30.1 Unique device ID register
+        # F101, F102, F103, F105, F107
+        "F1": 256,  # bytes
+        # ST RM0366 section 29.1 Unique device ID register
+        # ST RM0365 section 34.1 Unique device ID register
+        # ST RM0316 section 34.1 Unique device ID register
+        # ST RM0313 section 32.1 Unique device ID register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 256,  # bytes
+        # ST RM0090 section 39.1 Unique device ID register
+        # F405/415, F407/417, F427/437, F429/439
+        "F4": 256,  # bytes
+        # ST RM0385 section 41.2 Unique device ID register
+        "F7": 256,  # bytes
+        # ST RM0394 47.1 Unique device ID register (96 bits)
+        "L4": 256,  # bytes
+        # ST RM0451 25.2 Unique device ID register (96 bits)
+        "L0": 128,  # bytes
+        # ST RM0444 section 38.1 Unique device ID register
+        "G0": 256,  # bytes
+    }
+
+    FLASH_PAGE_SIZE = {
+        "default": 1024,
+        # ST RM0360 section 27.1 Memory size data register
+        # F030x4/x6/x8/xC, F070x6/xB
+        "F0": 1024,  # bytes
+        # ST RM0008 section 30.2 Memory size registers
+        # F101, F102, F103, F105, F107
+        "F1": 1024,  # bytes
+        # ST RM0366 section 29.2 Memory size data register
+        # ST RM0365 section 34.2 Memory size data register
+        # ST RM0316 section 34.2 Memory size data register
+        # ST RM0313 section 32.2 Flash memory size data register
+        # F303/328/358/398, F301/318, F302, F37x
+        "F3": 2048,  # bytes
+        # ST RM0090 section 39.2 Flash size
+        # F405/415, F407/417, F427/437, F429/439
+        "F4": 1024,  # bytes
+        # ST RM0385 section 41.2 Flash size
+        "F7": 1024,  # bytes
+        # ST RM0394
+        "L4": 1024,  # bytes
+        # ST RM4510 25.1 Memory size register
+        "L0": 128,  # bytes
+        # ST RM0444 section 38.2 Flash memory size data register
+        "G0": 1024,  # bytes
+    }
 
     SYNCHRONIZE_ATTEMPTS = 2
 
@@ -289,6 +339,8 @@ class Stm32Bootloader:
         self.verbosity = verbosity
         self.show_progress = show_progress or ShowProgress(None)
         self.extended_erase = False
+        self.data_transfer_size = self.DATA_TRANSFER_SIZE.get(device_family or "default")
+        self.flash_page_size = self.FLASH_PAGE_SIZE.get(device_family or "default")
         self.device_family = device_family or "F1"
 
     def write(self, *data):
@@ -461,7 +513,7 @@ class Stm32Bootloader:
 
         Supports maximum 256 bytes.
         """
-        if length > self.DATA_TRANSFER_SIZE:
+        if length > self.data_transfer_size:
             raise DataLengthError("Can not read more than 256 bytes at once.")
         self.command(self.Command.READ_MEMORY, "Read memory")
         self.write_and_ack("0x11 address failed", self._encode_address(address))
@@ -485,7 +537,7 @@ class Stm32Bootloader:
         nr_of_bytes = len(data)
         if nr_of_bytes == 0:
             return
-        if nr_of_bytes > self.DATA_TRANSFER_SIZE:
+        if nr_of_bytes > self.data_transfer_size:
             raise DataLengthError("Can not write more than 256 bytes at once.")
         self.command(self.Command.WRITE_MEMORY, "Write memory")
         self.write_and_ack("0x31 address failed", self._encode_address(address))
@@ -618,11 +670,11 @@ class Stm32Bootloader:
         Length may be more than 256 bytes.
         """
         data = bytearray()
-        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
+        chunk_count = int(math.ceil(length / float(self.data_transfer_size)))
         self.debug(5, "Read %d chunks at address 0x%X..." % (chunk_count, address))
         with self.show_progress("Reading", maximum=chunk_count) as progress_bar:
             while length:
-                read_length = min(length, self.DATA_TRANSFER_SIZE)
+                read_length = min(length, self.data_transfer_size)
                 self.debug(
                     10,
                     "Read %(len)d bytes at 0x%(address)X"
@@ -641,13 +693,13 @@ class Stm32Bootloader:
         Data length may be more than 256 bytes.
         """
         length = len(data)
-        chunk_count = int(math.ceil(length / float(self.DATA_TRANSFER_SIZE)))
+        chunk_count = int(math.ceil(length / float(self.data_transfer_size)))
         offset = 0
         self.debug(5, "Write %d chunks at address 0x%X..." % (chunk_count, address))
 
         with self.show_progress("Writing", maximum=chunk_count) as progress_bar:
             while length:
-                write_length = min(length, self.DATA_TRANSFER_SIZE)
+                write_length = min(length, self.data_transfer_size)
                 self.debug(
                     10,
                     "Write %(len)d bytes at 0x%(address)X"
