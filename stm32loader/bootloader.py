@@ -550,7 +550,7 @@ class Stm32Bootloader:
                     "Can not erase more than 65535 pages at once.\n"
                     "Set pages to None to do global erase or supply fewer pages."
                 )
-            page_count = (len(pages) & 0xFF) - 1
+            page_count = (len(pages) & 0xFFFF) - 1
             page_count_bytes = bytearray(struct.pack(">H", page_count))
             page_bytes = bytearray(len(pages) * 2)
             for i, page in enumerate(pages):
