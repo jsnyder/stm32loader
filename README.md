@@ -172,5 +172,4 @@ Future work
 * Use proper logging instead of print statements
 * Try Azure pipelines for CI
 * Support PyPy, PyPy3
-* Drop Python2 support; start using intenum for commands and replies
-* Determine flash page size or make this configurable
+* Start using intenum for commands and replies
