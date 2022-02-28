@@ -369,12 +369,12 @@ class Stm32Loader:
             return
 
         try:
-            if family != "F4":
-                flash_size = self.stm32.get_flash_size(family)
-                device_uid = self.stm32.get_uid(family)
+            if family not in ["F4", "L0"]:
+                flash_size = self.stm32.get_flash_size()
+                device_uid = self.stm32.get_uid()
             else:
-                # special fix for F4 devices
-                flash_size, device_uid = self.stm32.get_flash_size_and_uid_f4()
+                # special fix for F4 and L0 devices
+                flash_size, device_uid = self.stm32.get_flash_size_and_uid()
         except bootloader.CommandError as e:
             self.debug(
                 0,

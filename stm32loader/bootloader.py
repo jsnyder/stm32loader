@@ -457,21 +457,35 @@ class Stm32Bootloader:
         flash_size = flash_size_bytes[0] + (flash_size_bytes[1] << 8)
         return flash_size
 
-    def get_flash_size_and_uid_f4(self):
+    def get_flash_size_and_uid(self):
         """
-        Return device_uid and flash_size for F4 family.
+        Return device_uid and flash_size for L0 and F4 family devices.
 
         For some reason, F4 (at least, NUCLEO F401RE) can't read the 12 or 2
         bytes for UID and flash size directly.
         Reading a whole chunk of 256 bytes at 0x1FFFA700 does work and
         requires some data extraction.
         """
-        data_start_addr = 0x1FFF7A00
-        flash_size_lsb_addr = 0x22
-        uid_lsb_addr = 0x10
-        data = self.read_memory(data_start_addr, self.DATA_TRANSFER_SIZE)
-        device_uid = data[uid_lsb_addr : uid_lsb_addr + 12]
-        flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr + 1] << 8
+        flash_size_address = self.FLASH_SIZE_ADDRESS[self.device_family]
+        uid_address = self.UID_ADDRESS.get(self.device_family)
+
+        if uid_address is None:
+            return None, None
+
+        data_start_address = uid_address & 0xFFFFFF00
+        flash_size_lsb_address = flash_size_address - data_start_address
+        uid_lsb_address = uid_address - data_start_address
+
+        self.debug(10, "flash_size_address = 0x%X" % flash_size_address)
+        self.debug(10, "uid_address = 0x%X" % uid_address)
+        # self.debug(10, 'data_start_address =0x%X' % data_start_address)
+        # self.debug(10, 'flashsizelsbaddress =0x%X' % flash_size_lsb_address)
+        # self.debug(10, 'uid_lsb_address = 0x%X' % uid_lsb_address)
+
+        data = self.read_memory(data_start_address, self.data_transfer_size)
+        device_uid = data[uid_lsb_address : uid_lsb_address + 12]
+        flash_size = data[flash_size_lsb_address] + (data[flash_size_lsb_address + 1] << 8)
+
         return flash_size, device_uid
 
     def get_uid(self):
