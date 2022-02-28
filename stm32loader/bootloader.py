@@ -267,7 +267,7 @@ class Stm32Bootloader:
 
     SYNCHRONIZE_ATTEMPTS = 2
 
-    def __init__(self, connection, verbosity=5, show_progress=None):
+    def __init__(self, connection, device_family=None, verbosity=5, show_progress=None):
         """
         Construct the Stm32Bootloader object.
 
@@ -289,6 +289,7 @@ class Stm32Bootloader:
         self.verbosity = verbosity
         self.show_progress = show_progress or ShowProgress(None)
         self.extended_erase = False
+        self.device_family = device_family or "F1"
 
     def write(self, *data):
         """Write the given data to the MCU."""
@@ -397,9 +398,9 @@ class Stm32Bootloader:
         _device_id = reduce(lambda x, y: x * 0x100 + y, id_data)
         return _device_id
 
-    def get_flash_size(self, device_family):
+    def get_flash_size(self):
         """Return the MCU's flash size in bytes."""
-        flash_size_address = self.FLASH_SIZE_ADDRESS[device_family]
+        flash_size_address = self.FLASH_SIZE_ADDRESS[self.device_family]
         flash_size_bytes = self.read_memory(flash_size_address, 2)
         flash_size = flash_size_bytes[0] + (flash_size_bytes[1] << 8)
         return flash_size
@@ -421,7 +422,7 @@ class Stm32Bootloader:
         flash_size = data[flash_size_lsb_addr] + data[flash_size_lsb_addr + 1] << 8
         return flash_size, device_uid
 
-    def get_uid(self, device_id):
+    def get_uid(self):
         """
         Send the 'Get UID' command and return the device UID.
 
@@ -430,12 +431,10 @@ class Stm32Bootloader:
         Return UIT_ADDRESS_UNKNOWN if the address of the device's
         UID is not known.
 
-        :param str device_id: Device family name such as "F1".
-          See UID_ADDRESS.
         :return byterary: UID bytes of the device, or 0 or -1 when
           not available.
         """
-        uid_address = self.UID_ADDRESS.get(device_id, self.UID_ADDRESS_UNKNOWN)
+        uid_address = self.UID_ADDRESS.get(self.device_family, self.UID_ADDRESS_UNKNOWN)
         if uid_address is None:
             return self.UID_NOT_SUPPORTED
         if uid_address == self.UID_ADDRESS_UNKNOWN:
