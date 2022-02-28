@@ -256,7 +256,7 @@ class Stm32Loader:
         self.configuration.parity = Stm32Loader.PARITY[self.configuration.parity.lower()]
 
     def connect(self):
-        """Connect to the RS-232 serial port."""
+        """Connect to the bootloader UART over an RS-232 serial port."""
         serial_connection = SerialConnection(
             self.configuration.port, self.configuration.baud, self.configuration.parity
         )
