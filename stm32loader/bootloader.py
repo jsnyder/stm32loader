@@ -42,6 +42,7 @@ CHIP_IDS = {
     # 768 to 1024 KiB
     0x430: "STM3210xx XL-density",
     # flash size to be looked up
+    0x417: "STM32L05xxx/06xxx",
     0x416: "STM32L1xxx6(8/B) Medium-density ultralow power line",
     0x411: "STM32F2xxx",
     0x433: "STM32F4xxD/E",
@@ -220,6 +221,8 @@ class Stm32Bootloader:
         "H7": 0x1FF1E800,
         # ST RM0394 47.1 Unique device ID register (96 bits)
         "L4": 0x1FFF7590,
+        # ST RM0451 25.2 Unique device ID register (96 bits)
+        "L0": 0x1FF80050,
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 0x1FFF7590,
     }
@@ -253,6 +256,8 @@ class Stm32Bootloader:
         "H7": 0x1FF1E880,
         # ST RM0394
         "L4": 0x1FFF75E0,
+        # ST RM4510 25.1 Memory size register
+        "L0": 0x1FF8007C,
         # ST RM0444 section 38.2 Flash memory size data register
         "G0": 0x1FFF75E0,
     }
