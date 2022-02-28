@@ -120,6 +120,13 @@ Inspiration for features from:
   https://github.com/Sweet-Peas/WiznetLoader
 
 
+Alternatives
+------------
+
+If you don't need the flexibility of a Python tool, you can take
+a look at other similar tools in `ALTERNATIVES.md`.
+
+
 Electrically
 ------------
 
