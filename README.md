@@ -15,8 +15,14 @@ for Wiznet W7500.
 Compatible with Python version 3.4 to 3.8.
 
 
-Usage
------
+## Installation
+
+    pip install stm32loader
+
+To install the latest development version:
+
+    pip install git+https://github.com/florisla/stm32loader.git
+
 
 ```
 usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD]
