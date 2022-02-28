@@ -52,4 +52,7 @@ Java library allowing to flash STM32 microcontrollers over UART.
 https://github.com/grevaillot/stm32flash-lib
 
 
-## GigaDevice Windows ISP GUI
+## GigaDevice tools
+
+GigaDevice offers the GD-Link Programmer to work with the GD-Link debug adapter,
+and GigaDevice MCU ISP Programmer.

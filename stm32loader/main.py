@@ -26,6 +26,7 @@ import atexit
 import copy
 import os
 import sys
+from types import SimpleNamespace
 
 try:
     from progress.bar import ChargingBar as progress_bar
@@ -71,7 +72,7 @@ class Stm32Loader:
     def __init__(self):
         """Construct Stm32Loader object with default settings."""
         self.stm32 = None
-        self.configuration = None
+        self.configuration = SimpleNamespace()
 
     def debug(self, level, message):
         """Log a message to stderror if its level is low enough."""

@@ -1,5 +1,4 @@
-STM32Loader
-=========== 
+# STM32Loader
 
 [![PyPI package](https://badge.fury.io/py/stm32loader.svg)](https://badge.fury.io/py/stm32loader)
 [![Build Status](https://travis-ci.org/florisla/stm32loader.svg?branch=master)](https://travis-ci.org/florisla/stm32loader)
@@ -12,11 +11,19 @@ ST Microelectronics STM32 microcontrollers over UART.
 Also supports ST BlueNRG devices, and the SweetPeas bootloader
 for Wiznet W7500.
 
-Compatible with Python version 3.4 to 3.8.
+Compatible with Python version 3.6 to 3.10.
 
 
-Usage
------
+## Installation
+
+    pip install stm32loader
+
+To install the latest development version:
+
+    pip install git+https://github.com/florisla/stm32loader.git
+
+
+## Usage
 
 ```
 usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD]
@@ -65,8 +72,7 @@ examples:
 ```
 
 
-Example
--------
+## Command-line example
 
 ```
 stm32loader -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
@@ -86,16 +92,14 @@ stm32loader -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump
 ```
 
 
-Reference documents
--------------------
+## Reference documents
 
 * ST AN2606: STM32 microcontroller system memory boot mode
 * ST AN3155: USART protocol used in the STM32 bootloader
 * ST AN4872: BlueNRG-1 and BlueNRG-2 UART bootloader protocol
 
 
-Acknowledgement
----------------
+## Acknowledgement
 
 Original Version by Ivan A-R (tuxotronic.org).
 Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
@@ -120,15 +124,13 @@ Inspiration for features from:
   https://github.com/Sweet-Peas/WiznetLoader
 
 
-Alternatives
-------------
+## Alternatives
 
 If you don't need the flexibility of a Python tool, you can take
 a look at other similar tools in `ALTERNATIVES.md`.
 
 
-Electrically
-------------
+## Electrically
 
 The below assumes you are connecting an STM32F10x.
 For other chips, the serial pins and/or the BOOT0 / BOOT1 values
@@ -151,8 +153,7 @@ When given a choice, set BOOT0 manually high and drive reset through the serial
 adepter (it needs to toggle, whereas BOOT0 does not).
 
 
-Not currently supported
------------------------
+## Not currently supported
 
 * Command-line argument for readout protection
 * Command-line argument for write protection/unprotection
@@ -161,10 +162,9 @@ Not currently supported
 * Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
 
 
-Future work
------------
+## Future work
+
 * Use proper logging instead of print statements
 * Try Azure pipelines for CI
 * Support PyPy, PyPy3
-* Drop Python2 support; start using intenum for commands and replies
-* Determine flash page size or make this configurable
+* Start using intenum for commands and replies
