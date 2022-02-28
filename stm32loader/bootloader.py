@@ -472,6 +472,8 @@ class Stm32Bootloader:
         if uid_address is None:
             return None, None
 
+        # Start address is the start of the 256-byte block
+        # containing uid_address and flash_size_address.
         data_start_address = uid_address & 0xFFFFFF00
         flash_size_lsb_address = flash_size_address - data_start_address
         uid_lsb_address = uid_address - data_start_address
@@ -573,12 +575,13 @@ class Stm32Bootloader:
         """
         Erase flash memory at the given pages.
 
-        Set pages to None to erase the full memory.
+        Set pages to None to erase the full memory ('global erase').
+
         :param iterable pages: Iterable of integer page addresses, zero-based.
           Set to None to trigger global mass erase.
         """
         if self.extended_erase:
-            # use erase with two-byte addresses
+            # Use erase with two-byte addresses.
             self.extended_erase_memory(pages)
             return
 

@@ -78,6 +78,7 @@ class SerialConnection:
         )
 
     def disconnect(self):
+        """Close the connection."""
         if not self.serial_connection:
             return
 
