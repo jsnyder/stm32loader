@@ -23,7 +23,9 @@ Handle RS-232 serial communication through pyserial.
 Offer support for toggling RESET and BOOT0.
 """
 
-# This file not named 'serial' because that name-clashed in Python 2
+# Note: this file not named 'serial' because that name-clashed in Python 2
+
+
 import serial
 
 
@@ -110,3 +112,7 @@ class SerialConnection:
             self.serial_connection.setDTR(level)
         else:
             self.serial_connection.setRTS(level)
+
+    def flush_imput_buffer(self):
+        """Flush the input buffer to remove any stale read data."""
+        self.serial_connection.reset_input_buffer()
