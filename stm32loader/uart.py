@@ -77,6 +77,13 @@ class SerialConnection:
             timeout=self._timeout,
         )
 
+    def disconnect(self):
+        if not self.serial_connection:
+            return
+
+        self.serial_connection.close()
+        self.serial_connection = None
+
     def write(self, *args, **kwargs):
         """Write the given data to the serial connection."""
         return self.serial_connection.write(*args, **kwargs)
