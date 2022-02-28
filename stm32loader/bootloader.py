@@ -591,7 +591,9 @@ class Stm32Bootloader:
             # Special case: L0 erase should do each page separately.
             flash_size, _uid = self.get_flash_size_and_uid()
             page_count = (flash_size * 1024) // self.flash_page_size
-            pages = range(page_count - 1)
+            if page_count > 255:
+                raise PageIndexError("Can not erase more than 255 pages for L0 family.")
+            pages = range(page_count)
         if pages:
             # page erase, see ST AN3155
             if len(pages) > 255:
@@ -599,7 +601,7 @@ class Stm32Bootloader:
                     "Can not erase more than 255 pages at once.\n"
                     "Set pages to None to do global erase or supply fewer pages."
                 )
-            page_count = (len(pages) - 1) & 0xFF
+            page_count = len(pages) - 1
             page_numbers = bytearray(pages)
             checksum = reduce(operator.xor, page_numbers, page_count)
             self.write(page_count, page_numbers, checksum)
