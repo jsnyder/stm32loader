@@ -2,14 +2,10 @@
 
 import pytest
 
+from unittest.mock import MagicMock
+
 from stm32loader import bootloader as Stm32
 from stm32loader.bootloader import Stm32Bootloader
-
-try:
-    from unittest.mock import MagicMock
-except ImportError:
-    # Python version <= 3.2
-    from mock import MagicMock
 
 # pylint: disable=missing-docstring, redefined-outer-name
 
@@ -148,6 +144,21 @@ def test_erase_memory_with_page_count_higher_than_255_raises_page_index_error(bo
         bootloader.erase_memory([1] * 256)
 
 
+def test_erase_memory_family_l0_without_pages_erases_individual_pages(connection, write):
+    bootloader = Stm32Bootloader(connection, device_family="L0")
+    bootloader.command = MagicMock()
+    bootloader.get_flash_size_and_uid = MagicMock()
+    bootloader.get_flash_size_and_uid.return_value = (16, 0x01)
+    bootloader.erase_memory()
+
+    # Page count - 1.
+    assert write.written_data[0] == 127
+    # Pages.
+    assert write.written_data[1:3] == b'\x00\x01'
+    # Length: command + byte count + page-addresses + CRC
+    assert len(write.written_data) == 130
+
+
 def test_extended_erase_memory_without_pages_sends_global_mass_erase(bootloader, write):
     bootloader.extended_erase_memory()
     assert write.data_was_written(b'\xff\xff\x00')
@@ -188,7 +199,7 @@ def test_verify_data_with_non_identical_data_raises_verify_error_complaining_abo
 
 
 @pytest.mark.parametrize(
-    "family", ["F1", "F4", "F7"],
+    "family", ["F1", "F3", "F7"],
 )
 def test_get_uid_for_known_family_reads_at_correct_address(connection, family):
     bootloader = Stm32Bootloader(connection, device_family=family)
@@ -206,6 +217,29 @@ def test_get_uid_for_family_without_uid_returns_uid_not_supported(connection):
 def test_get_uid_for_unknown_family_returns_uid_address_unknown(connection):
     bootloader = Stm32Bootloader(connection, device_family="X")
     assert bootloader.UID_ADDRESS_UNKNOWN == bootloader.get_uid()
+
+
+@pytest.mark.parametrize(
+    "family", ["F4", "L0"],
+)
+def test_get_flash_size_and_uid_for_exception_families_returns_size_and_uid(connection, family):
+    bootloader = Stm32Bootloader(connection, device_family=family)
+    bootloader.read_memory = MagicMock()
+
+    memory_block = bytearray([0] * 256)
+
+    # Set up the 'UID' value (12 bytes)
+    # and flash_size value (2 bytes).
+    uid_address = bootloader.UID_ADDRESS[family] & 0xFF
+    memory_block[uid_address: uid_address + 12] = b'\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c'
+    flash_size_address = bootloader.FLASH_SIZE_ADDRESS[family] & 0xFF
+    memory_block[flash_size_address: flash_size_address + 2] = b'\x01\x02'
+    bootloader.read_memory.return_value = memory_block
+
+    flash_size, uid = bootloader.get_flash_size_and_uid()
+
+    assert flash_size == 0x0201
+    assert uid == b'\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c'
 
 
 @pytest.mark.parametrize(
