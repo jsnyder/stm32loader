@@ -1,17 +1,18 @@
 # STM32Loader
 
 [![PyPI package](https://badge.fury.io/py/stm32loader.svg)](https://badge.fury.io/py/stm32loader)
-[![Build Status](https://travis-ci.org/florisla/stm32loader.svg?branch=master)](https://travis-ci.org/florisla/stm32loader)
+[![GitHub Actions](https://img.shields.io/github/workflow/status/florisla/stm32loader/Test?label=tests)](https://github.com/florisla/stm32loader/actions/workflows/test.yaml)
+[![GitHub Actions](https://img.shields.io/github/workflow/status/florisla/stm32loader/Lint?label=lint)](https://github.com/florisla/stm32loader/actions/workflows/lint.yaml)
 [![License](https://img.shields.io/pypi/l/stm32loader.svg)](https://pypi.org/project/stm32loader/)
 [![Downloads](https://pepy.tech/badge/stm32loader)](https://pepy.tech/project/stm32loader)
 
-Python script to upload or download firmware to / from
+Python module to upload or download firmware to / from
 ST Microelectronics STM32 microcontrollers over UART.
 
 Also supports ST BlueNRG devices, and the SweetPeas bootloader
 for Wiznet W7500.
 
-Compatible with Python version 3.6 to 3.10.
+Compatible with Python version 3.6 to 3.10 and PyPy 3.7 to 3.9.
 
 
 ## Installation
@@ -115,7 +116,8 @@ stm32loader -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump
 Original Version by Ivan A-R (tuxotronic.org).
 Contributions by Domen Puncer, James Snyder, Floris Lambrechts,
 Atokulus, sam-bristow, NINI1988, Omer Kilic, Szymon Szantula, rdaforno,
-Mikolaj Stawiski, Tyler Coy, Alex Klimaj, Ondrej Mikle.
+Mikolaj Stawiski, Tyler Coy, Alex Klimaj, Ondrej Mikle, denniszollo,
+emilzay, michsens, blueskull, Mattia Maldini.
 
 Inspiration for features from:
 
@@ -166,16 +168,15 @@ adepter (it needs to toggle, whereas BOOT0 does not).
 
 ## Not currently supported
 
-* Command-line argument for readout protection
-* Command-line argument for write protection/unprotection
-* STM8 devices (ST UM0560)
-* Paged flash erase for devices with page size <> 1 KiB
-* Other bootloader protocols (e.g. I2C, HEX -> implemented in stm32flash)
+* Command-line argument for readout protection.
+* Command-line argument for write protection/unprotection.
+* STM8 devices (ST UM0560).
+* Paged flash erase for devices with page size <> 1 KiB.
+* Other bootloader protocols (e.g. I2C, HEX -> implemented in `stm32flash`).
 
 
 ## Future work
 
-* Use proper logging instead of print statements
-* Try Azure pipelines for CI
-* Support PyPy, PyPy3
-* Start using intenum for commands and replies
+* Use f-strings.
+* Use proper logging instead of print statements.
+* Start using intenum for commands and replies.
