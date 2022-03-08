@@ -9,7 +9,7 @@ defaults:
         shell: bash
 
 jobs:
-    tox:
+    pytest:
         strategy:
             fail-fast: true
             matrix:
