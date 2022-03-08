@@ -28,7 +28,7 @@ REQUIRED = [
 ]
 
 EXTRAS = {
-    "dev": ['setuptools', 'wheel', 'twine', 'pylint', 'flake8', 'flake8-isort', 'black', 'bump2version', 'nox'],
+    "dev": ['setuptools', 'wheel', 'twine', 'pylint', 'flake8', 'flake8-isort', 'black', 'bump2version', 'nox', 'cogapp'],
 }
 
 HERE = os.path.abspath(os.path.dirname(__file__))

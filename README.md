@@ -25,19 +25,32 @@ To install the latest development version:
 
 ## Usage
 
+<!-- [[[cog
+import sys
+from io import StringIO
+import cog
+from stm32loader.main import main
+
+sys.stdout = StringIO()
+
+main("--help", avoid_system_exit=True)
+
+cog.out(f"```\n{sys.stdout.getvalue()}```")
+
+sys.stdout.close()
+sys.stdout = sys.__stdout__
+]]] -->
 ```
-usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD]
-                   [-a ADDRESS] [-g ADDRESS] [-f FAMILY] [-V] [-q] [-s] [-R]
-                   [-B] [-n] [-P {even,none}] [--version]
-                   [FILE.BIN]
+usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD] [-a ADDRESS] [-g ADDRESS] [-f FAMILY] [-V] [-q] [-s] [-R] [-B] [-n] [-P {even,none}] [--version] [FILE.BIN]
+
+Flash firmware to STM32 microcontrollers.
 
 positional arguments:
   FILE.BIN              file to read from or store to flash
 
 optional arguments:
   -h, --help            show this help message and exit
-  -e, --erase           erase (note: this is required on previously written
-                        memory)
+  -e, --erase           erase (note: this is required on previously written memory)
   -u, --unprotect       unprotect in case erase fails
   -w, --write           write file content to flash
   -v, --verify          verify flash content versus local file (recommended)
@@ -51,8 +64,7 @@ optional arguments:
   -g ADDRESS, --go-address ADDRESS
                         start executing from address (0x08000000, usually)
   -f FAMILY, --family FAMILY
-                        device family to read out device UID and flash size;
-                        e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY)
+                        device family to read out device UID and flash size; e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY)
   -V, --verbose         verbose mode
   -q, --quiet           quiet mode
   -s, --swap-rts-dtr    swap RTS and DTR: use RTS for reset and DTR for boot0
@@ -62,15 +74,14 @@ optional arguments:
                         make boot0 active low
   -n, --no-progress     don't show progress bar
   -P {even,none}, --parity {even,none}
-                        parity: "even" for STM32, "none" for BlueNRG (default:
-                        even)
+                        parity: "even" for STM32, "none" for BlueNRG (default: even)
   --version             show program's version number and exit
 
 examples:
   stm32loader -p COM7 -f F1
   stm32loader -e -w -v example/main.bin
 ```
-
+<!-- [[[end]]] -->
 
 ## Command-line example
 
