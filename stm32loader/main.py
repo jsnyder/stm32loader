@@ -82,6 +82,8 @@ class Stm32Loader:
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
         parser = argparse.ArgumentParser(
+            prog="stm32loader",
+            description="Flash firmware to STM32 microcontrollers.",
             epilog="\n".join(
                 [
                     "examples:",
