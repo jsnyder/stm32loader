@@ -47,35 +47,35 @@ usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD] [
 Flash firmware to STM32 microcontrollers.
 
 positional arguments:
-  FILE.BIN              file to read from or store to flash
+  FILE.BIN              File to read from or store to flash.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -e, --erase           erase (note: this is required on previously written memory)
-  -u, --unprotect       unprotect in case erase fails
-  -w, --write           write file content to flash
-  -v, --verify          verify flash content versus local file (recommended)
-  -r, --read            read from flash and store in local file
+  -e, --erase           Erase (note: this is required on previously written memory).
+  -u, --unprotect       Unprotect in case erase fails.
+  -w, --write           Write file content to flash.
+  -v, --verify          Verify flash content versus local file (recommended).
+  -r, --read            Read from flash and store in local file.
   -l LENGTH, --length LENGTH
-                        length of read
-  -p PORT, --port PORT  serial port (default: $STM32LOADER_SERIAL_PORT)
-  -b BAUD, --baud BAUD  baudrate (default: 115200)
+                        Length of read.
+  -p PORT, --port PORT  Serial port (default: $STM32LOADER_SERIAL_PORT).
+  -b BAUD, --baud BAUD  Baudrate. (default: 115200)
   -a ADDRESS, --address ADDRESS
-                        target address (default: 134217728)
+                        Target address. (default: 134217728)
   -g ADDRESS, --go-address ADDRESS
-                        start executing from address (0x08000000, usually)
+                        Start executing from address (0x08000000, usually).
   -f FAMILY, --family FAMILY
-                        device family to read out device UID and flash size; e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY)
-  -V, --verbose         verbose mode
-  -q, --quiet           quiet mode
-  -s, --swap-rts-dtr    swap RTS and DTR: use RTS for reset and DTR for boot0
+                        Device family to read out device UID and flash size; e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY).
+  -V, --verbose         Verbose mode.
+  -q, --quiet           Quiet mode.
+  -s, --swap-rts-dtr    Swap RTS and DTR: use RTS for reset and DTR for boot0.
   -R, --reset-active-high
-                        make reset active high
+                        Make RESET active high.
   -B, --boot0-active-low
-                        make boot0 active low
-  -n, --no-progress     don't show progress bar
+                        Make BOOT0 active low.
+  -n, --no-progress     Don't show progress bar.
   -P {even,none}, --parity {even,none}
-                        parity: "even" for STM32, "none" for BlueNRG (default: even)
+                        Parity: "even" for STM32, "none" for BlueNRG. (default: even)
   --version             show program's version number and exit
 
 examples:
@@ -106,9 +106,9 @@ stm32loader -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump
 
 ## Reference documents
 
-* ST AN2606: STM32 microcontroller system memory boot mode
-* ST AN3155: USART protocol used in the STM32 bootloader
-* ST AN4872: BlueNRG-1 and BlueNRG-2 UART bootloader protocol
+* ST `AN2606`: STM32 microcontroller system memory boot mode
+* ST `AN3155`: USART protocol used in the STM32 bootloader
+* ST `AN4872`: BlueNRG-1 and BlueNRG-2 UART bootloader protocol
 
 
 ## Acknowledgement
@@ -151,26 +151,26 @@ may differ.
 
 Make the following connections:
 
-- Serial adapter GND to MCU GND.
+- Serial adapter `GND` to MCU `GND`.
 - Serial adapter power to MCU power or vice versa (either 3.3 or 5 Volt).
 - Note if you're using 5 Volt signaling or 3V3 on the serial adapter.
-- Serial TX to MCU RX (PA10).
-- Serial RX to MCU TX (PA9).
-- Serial DTR to MCU RESET.
-- Serial RTS to MCU BOOT0 (or BOOT0 to 3.3V).
-- MCU BOOT1 to GND.
+- Serial `TX` to MCU `RX` (`PA10`).
+- Serial `RX` to MCU `TX` (`PA9`).
+- Serial `DTR` to MCU `RESET`.
+- Serial `RTS` to MCU `BOOT0` (or `BOOT0` to 3.3V).
+- MCU `BOOT1` to `GND`.
 
-If either RTS or DTR are not available on your serial adapter, you'll have to
+If either `RTS` or `DTR` are not available on your serial adapter, you'll have to
 manually push buttons or work with jumpers.
-When given a choice, set BOOT0 manually high and drive reset through the serial
-adepter (it needs to toggle, whereas BOOT0 does not).
+When given a choice, set `BOOT0` manually high and drive `RESET` through the serial
+adapter (it needs to toggle, whereas `BOOT0` does not).
 
 
 ## Not currently supported
 
 * Command-line argument for readout protection.
 * Command-line argument for write protection/unprotection.
-* STM8 devices (ST UM0560).
+* STM8 devices (ST `UM0560`).
 * Paged flash erase for devices with page size <> 1 KiB.
 * Other bootloader protocols (e.g. I2C, HEX -> implemented in `stm32flash`).
 
@@ -179,4 +179,4 @@ adepter (it needs to toggle, whereas BOOT0 does not).
 
 * Use f-strings.
 * Use proper logging instead of print statements.
-* Start using intenum for commands and replies.
+* Start using `IntEnum` for commands and replies.

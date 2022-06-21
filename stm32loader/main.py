@@ -99,37 +99,37 @@ class Stm32Loader:
             metavar="FILE.BIN",
             type=str,
             nargs="?",
-            help="file to read from or store to flash",
+            help="File to read from or store to flash.",
         )
 
         parser.add_argument(
             "-e",
             "--erase",
             action="store_true",
-            help="erase (note: this is required on previously written memory)",
+            help="Erase (note: this is required on previously written memory).",
         )
 
         parser.add_argument(
-            "-u", "--unprotect", action="store_true", help="unprotect in case erase fails"
+            "-u", "--unprotect", action="store_true", help="Unprotect in case erase fails."
         )
 
         parser.add_argument(
-            "-w", "--write", action="store_true", help="write file content to flash"
+            "-w", "--write", action="store_true", help="Write file content to flash."
         )
 
         parser.add_argument(
             "-v",
             "--verify",
             action="store_true",
-            help="verify flash content versus local file (recommended)",
+            help="Verify flash content versus local file (recommended).",
         )
 
         parser.add_argument(
-            "-r", "--read", action="store_true", help="read from flash and store in local file"
+            "-r", "--read", action="store_true", help="Read from flash and store in local file."
         )
 
         length_arg = parser.add_argument(
-            "-l", "--length", action="store", type=int, help="length of read"
+            "-l", "--length", action="store", type=int, help="Length of read."
         )
 
         default_port = os.environ.get("STM32LOADER_SERIAL_PORT")
@@ -140,16 +140,16 @@ class Stm32Loader:
             type=str,  # morally required=True
             default=default_port,
             help=(
-                "serial port" + ("" if default_port else " (default: $STM32LOADER_SERIAL_PORT)")
+                "Serial port" + ("." if default_port else " (default: $STM32LOADER_SERIAL_PORT).")
             ),
         )
 
         parser.add_argument(
-            "-b", "--baud", action="store", type=int, default=115200, help="baudrate"
+            "-b", "--baud", action="store", type=int, default=115200, help="Baudrate."
         )
 
         address_arg = parser.add_argument(
-            "-a", "--address", action="store", type=int, default=0x08000000, help="target address"
+            "-a", "--address", action="store", type=int, default=0x08000000, help="Target address."
         )
 
         parser.add_argument(
@@ -158,7 +158,7 @@ class Stm32Loader:
             action="store",
             type=int,
             metavar="ADDRESS",
-            help="start executing from address (0x08000000, usually)",
+            help="Start executing from address (0x08000000, usually).",
         )
 
         default_family = os.environ.get("STM32LOADER_FAMILY")
@@ -169,9 +169,9 @@ class Stm32Loader:
             type=str,
             default=default_family,
             help=(
-                "device family to read out device UID and flash size; "
+                "Device family to read out device UID and flash size; "
                 "e.g F1 for STM32F1xx"
-                + ("" if default_family else " (default: $STM32LOADER_FAMILY)")
+                + ("." if default_family else " (default: $STM32LOADER_FAMILY).")
             ),
         )
 
@@ -182,30 +182,30 @@ class Stm32Loader:
             action="store_const",
             const=10,
             default=DEFAULT_VERBOSITY,
-            help="verbose mode",
+            help="Verbose mode.",
         )
 
         parser.add_argument(
-            "-q", "--quiet", dest="verbosity", action="store_const", const=0, help="quiet mode"
+            "-q", "--quiet", dest="verbosity", action="store_const", const=0, help="Quiet mode."
         )
 
         parser.add_argument(
             "-s",
             "--swap-rts-dtr",
             action="store_true",
-            help="swap RTS and DTR: use RTS for reset and DTR for boot0",
+            help="Swap RTS and DTR: use RTS for reset and DTR for boot0.",
         )
 
         parser.add_argument(
-            "-R", "--reset-active-high", action="store_true", help="make reset active high"
+            "-R", "--reset-active-high", action="store_true", help="Make RESET active high."
         )
 
         parser.add_argument(
-            "-B", "--boot0-active-low", action="store_true", help="make boot0 active low"
+            "-B", "--boot0-active-low", action="store_true", help="Make BOOT0 active low."
         )
 
         parser.add_argument(
-            "-n", "--no-progress", action="store_true", help="don't show progress bar"
+            "-n", "--no-progress", action="store_true", help="Don't show progress bar."
         )
 
         parser.add_argument(
@@ -215,7 +215,7 @@ class Stm32Loader:
             type=str,
             default="even",
             choices=self.PARITY.keys(),
-            help='parity: "even" for STM32, "none" for BlueNRG',
+            help='Parity: "even" for STM32, "none" for BlueNRG.',
         )
 
         parser.add_argument("--version", action="version", version=__version__)
