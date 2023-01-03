@@ -296,7 +296,7 @@ class Stm32Loader:
         show_progress = self._get_progress_bar(self.configuration.no_progress)
 
         self.stm32 = bootloader.Stm32Bootloader(
-            serial_connection, verbosity=self.configuration.verbosity, show_progress=show_progress
+            serial_connection, verbosity=self.configuration.verbosity, show_progress=show_progress, device_family=self.configuration.family
         )
 
         try:
