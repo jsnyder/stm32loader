@@ -71,6 +71,7 @@ CHIP_IDS = {
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
+    0x457: "STM32L01xxx/02xxx"
 }
 
 
@@ -623,6 +624,10 @@ class Stm32Bootloader:
         :param iterable pages: Iterable of integer page addresses, zero-based.
           Set to None to trigger global mass erase.
         """
+        if not pages and self.device_family in ('L0', ):
+            flash_size, _uid = self.get_flash_size_and_uid()
+            pages = list(range(0, (flash_size*1024) // self.flash_page_size))
+
         self.command(self.Command.EXTENDED_ERASE, "Extended erase memory")
         if pages:
             # page erase, see ST AN3155
