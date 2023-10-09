@@ -81,6 +81,11 @@ class Stm32Loader:
 
     def parse_arguments(self, arguments):
         """Parse the list of command-line arguments."""
+
+        def auto_int(x):
+            """Convert to int with automatic base detection."""
+            return int(x, 0)
+
         parser = argparse.ArgumentParser(
             prog="stm32loader",
             description="Flash firmware to STM32 microcontrollers.",
@@ -129,7 +134,7 @@ class Stm32Loader:
         )
 
         length_arg = parser.add_argument(
-            "-l", "--length", action="store", type=int, help="Length of read."
+            "-l", "--length", action="store", type=auto_int, help="Length of read."
         )
 
         default_port = os.environ.get("STM32LOADER_SERIAL_PORT")
@@ -149,14 +154,14 @@ class Stm32Loader:
         )
 
         address_arg = parser.add_argument(
-            "-a", "--address", action="store", type=int, default=0x08000000, help="Target address."
+            "-a", "--address", action="store", type=auto_int, default=0x08000000, help="Target address."
         )
 
         parser.add_argument(
             "-g",
             "--go-address",
             action="store",
-            type=int,
+            type=auto_int,
             metavar="ADDRESS",
             help="Start executing from address (0x08000000, usually).",
         )
