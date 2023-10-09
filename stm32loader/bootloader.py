@@ -68,10 +68,10 @@ CHIP_IDS = {
     0x445: "STM32F070x6",
     0x448: "STM32F070xB",
     0x442: "STM32F030xC",
+    0x457: "STM32L01xxx/02xxx"
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
-    0x457: "STM32L01xxx/02xxx"
 }
 
 
@@ -625,6 +625,8 @@ class Stm32Bootloader:
           Set to None to trigger global mass erase.
         """
         if not pages and self.device_family in ('L0', ):
+            # L0 devices do not support mass erase.
+            # Instead, erase all pages individually.
             flash_size, _uid = self.get_flash_size_and_uid()
             pages = list(range(0, (flash_size*1024) // self.flash_page_size))
 
