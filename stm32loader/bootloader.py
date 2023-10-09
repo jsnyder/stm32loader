@@ -68,7 +68,8 @@ CHIP_IDS = {
     0x445: "STM32F070x6",
     0x448: "STM32F070xB",
     0x442: "STM32F030xC",
-    0x457: "STM32L01xxx/02xxx"
+    0x457: "STM32L01xxx/02xxx",
+    0x497: "STM32WLE5xx/WL55xx",
     # Cortex-M0 MCU with hardware TCP/IP and MAC
     # (SweetPeas custom bootloader)
     0x801: "Wiznet W7500",
@@ -226,6 +227,8 @@ class Stm32Bootloader:
         "L0": 0x1FF80050,
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 0x1FFF7590,
+        # ST RM0453 section 39.1.1 Unique device ID register
+        "WL": 0x1FFF7590,
     }
 
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
@@ -261,6 +264,8 @@ class Stm32Bootloader:
         "L0": 0x1FF8007C,
         # ST RM0444 section 38.2 Flash memory size data register
         "G0": 0x1FFF75E0,
+        # ST RM0453 section 39.1.2 Flash size data register
+        "WL": 0x1FFF75E0,
     }
 
     DATA_TRANSFER_SIZE = {
@@ -287,6 +292,7 @@ class Stm32Bootloader:
         "L0": 128,  # bytes
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 256,  # bytes
+        "WL": 256,  # bytes
     }
 
     FLASH_PAGE_SIZE = {
@@ -314,6 +320,7 @@ class Stm32Bootloader:
         "L0": 128,  # bytes
         # ST RM0444 section 38.2 Flash memory size data register
         "G0": 1024,  # bytes
+        "WL": 1024,  # bytes
     }
 
     SYNCHRONIZE_ATTEMPTS = 2
