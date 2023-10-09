@@ -1,3 +1,56 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "stm32loader"
+authors = [
+    {name = "jsnyder"},
+    {name = "Floris Lambrechts", email = "florisla@gmail.com"},
+]
+readme = "README.md"
+description = "Flash firmware to STM32 microcontrollers using Python."
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+dependencies = [
+    "pyserial",
+    "progress",
+]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version", "description"]
+
+[project.optional-dependencies]
+dev = [
+    "wheel",
+    "twine",
+    "pylint",
+    "flake8",
+    "flake8-isort",
+    "black",
+    "bump2version",
+    "nox",
+    "cogapp",
+]
+
+[project.scripts]
+stm32loader = "stm32loader.__main__:main"
+
+[project.urls]
+Home = "https://github.com/florisla/stm32loader"
+BugTracker = "https://github.com/florisla/stm32loader/issues"
+SourceCode = "https://github.com/florisla/stm32loader"
+
 
 [tool.black]
 line-length = 98
@@ -12,3 +65,16 @@ exclude = '''
   | .*\.egg-info
 )/
 '''
+
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers -m 'not (hardware or hardware_missing)'"
+markers = [
+    "hardware",
+    "missing_hardware",
+]
+
+
+[tool.isort]
+line_length = 98
+multi_line_output = 2

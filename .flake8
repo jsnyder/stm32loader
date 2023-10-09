@@ -1,13 +1,3 @@
-[bdist_wheel]
-universal = 0
-
-[metadata]
-license_file = LICENSE
-
-[isort]
-line_length = 98
-multi_line_output = 2
-
 [flake8]
 max-line-length = 98
 max-doc-length = 78
@@ -33,9 +23,3 @@ ignore =
 per-file-ignores =
 	tests/*:D103,
 	stm32loader/bootloader.py:B305,
-
-[tool:pytest]
-addopts = --strict -m "not (hardware or hardware_missing)"
-markers =
-	hardware
-	missing_hardware
