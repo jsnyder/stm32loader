@@ -84,6 +84,7 @@ class Stm32Loader:
 
         def auto_int(x):
             """Convert to int with automatic base detection."""
+            # This supports 0x10 == 16 and 10 == 10
             return int(x, 0)
 
         parser = argparse.ArgumentParser(
