@@ -60,9 +60,13 @@ CHIP_IDS = {
     0x451: "STM32F76xxx/77xxx",
     # RM0394 46.6.1 MCU device ID code
     0x435: "STM32L4xx",
-    # see ST AN4872
-    # requires parity None
-    0x11103: "BlueNRG",
+    # ST BlueNRG series; see ST AN4872.
+    # Three-byte ID where we mask out byte 1 (metal fix) and byte 2 (mask set).
+    # Requires parity None.
+    0x000003: "BlueNRG-1 160kB",
+    0x00000F: "BlueNRG-1 256kB",
+    0x000023: "BlueNRG-2 160kB",
+    0x00002F: "BlueNRG-2 256kB",
     # STM32F0 RM0091 Table 136. DEV_ID and REV_ID field values
     0x440: "STM32F030x8",
     0x445: "STM32F070x6",
@@ -229,6 +233,8 @@ class Stm32Bootloader:
         "G0": 0x1FFF7590,
         # ST RM0453 section 39.1.1 Unique device ID register
         "WL": 0x1FFF7590,
+        # ST BlueNRG has DIE_ID register with PRODUCT, but no UID.
+        "NRG": None,
     }
 
     UID_SWAP = [[1, 0], [3, 2], [7, 6, 5, 4], [11, 10, 9, 8]]
@@ -266,6 +272,8 @@ class Stm32Bootloader:
         "G0": 0x1FFF75E0,
         # ST RM0453 section 39.1.2 Flash size data register
         "WL": 0x1FFF75E0,
+        # ST BlueNRG-2 datasheet
+        "NRG": 0x40100014,
     }
 
     DATA_TRANSFER_SIZE = {
@@ -293,34 +301,38 @@ class Stm32Bootloader:
         # ST RM0444 section 38.1 Unique device ID register
         "G0": 256,  # bytes
         "WL": 256,  # bytes
+        "NRG": 256,
     }
 
     FLASH_PAGE_SIZE = {
+        # In bytes.
         "default": 1024,
         # ST RM0360 section 27.1 Memory size data register
         # F030x4/x6/x8/xC, F070x6/xB
-        "F0": 1024,  # bytes
+        "F0": 1024,
         # ST RM0008 section 30.2 Memory size registers
         # F101, F102, F103, F105, F107
-        "F1": 1024,  # bytes
+        "F1": 1024,
         # ST RM0366 section 29.2 Memory size data register
         # ST RM0365 section 34.2 Memory size data register
         # ST RM0316 section 34.2 Memory size data register
         # ST RM0313 section 32.2 Flash memory size data register
         # F303/328/358/398, F301/318, F302, F37x
-        "F3": 2048,  # bytes
+        "F3": 2048,
         # ST RM0090 section 39.2 Flash size
         # F405/415, F407/417, F427/437, F429/439
-        "F4": 1024,  # bytes
+        "F4": 1024,
         # ST RM0385 section 41.2 Flash size
-        "F7": 1024,  # bytes
+        "F7": 1024,
         # ST RM0394
-        "L4": 1024,  # bytes
+        "L4": 1024,
         # ST RM4510 25.1 Memory size register
-        "L0": 128,  # bytes
+        "L0": 128,
         # ST RM0444 section 38.2 Flash memory size data register
-        "G0": 1024,  # bytes
-        "WL": 1024,  # bytes
+        "G0": 1024,
+        "WL": 1024,
+        # ST BlueNRG-2 data sheet: 128 pages of 8 * 64 * 4 bytes
+        "NRG": 2048,
     }
 
     SYNCHRONIZE_ATTEMPTS = 2

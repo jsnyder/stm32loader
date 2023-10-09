@@ -181,7 +181,7 @@ class Stm32Loader:
             default=default_family,
             help=(
                 "Device family to read out device UID and flash size; "
-                "e.g F1 for STM32F1xx"
+                "e.g F1 for STM32F1xx. Possible values: F0, F1, F3, F4, F7, H7, L4, L0, G0, NRG."
                 + ("." if default_family else " (default: $STM32LOADER_FAMILY).")
             ),
         )
@@ -374,6 +374,16 @@ class Stm32Loader:
         boot_version = self.stm32.get()
         self.debug(0, "Bootloader version: 0x%X" % boot_version)
         device_id = self.stm32.get_id()
+        family = self.configuration.family
+        if family == "NRG":
+            # ST AN4872.
+            # Three bytes encode metal fix, mask set, BlueNRG-series + flash size.
+            metal_fix = (device_id & 0xFF0000) >> 16
+            mask_set = (device_id & 0x00FF00) >> 8
+            device_id = device_id & 0x0000FF
+            self.debug(0, "Metal fix: 0x%X" % metal_fix)
+            self.debug(0, "Mask set: 0x%X" % mask_set)
+
         self.debug(
             0, "Chip id: 0x%X (%s)" % (device_id, bootloader.CHIP_IDS.get(device_id, "Unknown"))
         )
