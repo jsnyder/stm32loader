@@ -377,7 +377,8 @@ class Stm32Loader:
         family = self.configuration.family
         if family == "NRG":
             # ST AN4872.
-            # Three bytes encode metal fix, mask set, BlueNRG-series + flash size.
+            # Three bytes encode metal fix, mask set,
+            # BlueNRG-series + flash size.
             metal_fix = (device_id & 0xFF0000) >> 16
             mask_set = (device_id & 0x00FF00) >> 8
             device_id = device_id & 0x0000FF

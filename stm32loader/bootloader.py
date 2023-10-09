@@ -61,7 +61,8 @@ CHIP_IDS = {
     # RM0394 46.6.1 MCU device ID code
     0x435: "STM32L4xx",
     # ST BlueNRG series; see ST AN4872.
-    # Three-byte ID where we mask out byte 1 (metal fix) and byte 2 (mask set).
+    # Three-byte ID where we mask out byte 1 (metal fix)
+    # and byte 2 (mask set).
     # Requires parity None.
     0x000003: "BlueNRG-1 160kB",
     0x00000F: "BlueNRG-1 256kB",
