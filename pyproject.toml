@@ -28,7 +28,7 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
 ]
-dynamic = ["version", "description"]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
