@@ -5,8 +5,8 @@ from shutil import rmtree
 import nox
 
 
-DEFAULT_PYTHON_VERSION = "3.9"
-ALL_PYTHON_VERSIONS = ["3.6", "3.7", "3.8", "3.9", "3.10"]
+DEFAULT_PYTHON_VERSION = "3.11"
+ALL_PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11"]
 
 
 @nox.session(python=ALL_PYTHON_VERSIONS)

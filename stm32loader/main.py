@@ -155,7 +155,12 @@ class Stm32Loader:
         )
 
         address_arg = parser.add_argument(
-            "-a", "--address", action="store", type=auto_int, default=0x08000000, help="Target address."
+            "-a",
+            "--address",
+            action="store",
+            type=auto_int,
+            default=0x08000000,
+            help="Target address.",
         )
 
         parser.add_argument(
@@ -296,7 +301,10 @@ class Stm32Loader:
         show_progress = self._get_progress_bar(self.configuration.no_progress)
 
         self.stm32 = bootloader.Stm32Bootloader(
-            serial_connection, verbosity=self.configuration.verbosity, show_progress=show_progress, device_family=self.configuration.family
+            serial_connection,
+            verbosity=self.configuration.verbosity,
+            show_progress=show_progress,
+            device_family=self.configuration.family,
         )
 
         try:
