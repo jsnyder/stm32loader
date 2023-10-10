@@ -91,7 +91,7 @@ def parse_arguments(arguments):
     )
 
     length_arg = parser.add_argument(
-        "-l", "--length", action="store", type=_auto_int, help="Length of read."
+        "-l", "--length", action="store", type=_auto_int, help="Length of read or erase."
     )
 
     default_port = os.environ.get("STM32LOADER_SERIAL_PORT")
@@ -114,7 +114,7 @@ def parse_arguments(arguments):
         action="store",
         type=_auto_int,
         default=0x08000000,
-        help="Target address.",
+        help="Target address for read, write or erase.",
     )
 
     parser.add_argument(

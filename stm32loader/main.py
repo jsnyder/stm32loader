@@ -129,7 +129,13 @@ class Stm32Loader:
                 sys.exit(1)
         if self.configuration.erase:
             try:
-                self.stm32.erase_memory()
+                if self.configuration.address is None:
+                    self.stm32.erase_memory()
+                else:
+                    start_address = self.configuration.address
+                    end_address = self.configuration.address + self.configuration.length
+                    self.stm32.erase_memory(from_to=(start_address, end_address))
+
             except bootloader.CommandError:
                 # may be caused by readout protection
                 self.debug(
