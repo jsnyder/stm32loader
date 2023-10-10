@@ -104,6 +104,20 @@ stm32loader --read --port /dev/cu.usbserial-A5XK3RJT --family F1 --length 0x1000
 ```
 
 
+To erase the full device:
+
+```
+stm32loader --erase --port /dev/cu.usbserial-A5XK3RJT
+```
+
+Or erase only a specific region of the flash:
+
+```
+stm32loader --erase --address 0x08000000 --length 0x2000 --port /dev/cu.usbserial-A5XK3RJT
+```
+
+
+
 ## Reference documents
 
 * ST `AN2606`: STM32 microcontroller system memory boot mode
