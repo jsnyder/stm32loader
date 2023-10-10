@@ -38,7 +38,7 @@ jobs:
             with:
                 python-version: ${{ matrix.python-version }}
           - name: Install lint dependencies
-            run: pip install flake8 pyserial
+            run: pip install flake8 pyserial intelhex
           - name: Run flake8
             run: flake8 stm32loader
     pylint:
@@ -56,6 +56,6 @@ jobs:
               with:
                   python-version: ${{ matrix.python-version }}
             - name: Install lint dependencies
-              run: pip install pylint pyserial
+              run: pip install pylint pyserial intelhex
             - name: Run pylint
               run: pylint stm32loader

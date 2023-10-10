@@ -22,6 +22,7 @@ def tests(session):
     # see https://github.com/pypa/setuptools/issues/1671
     rmtree("./dist", ignore_errors=True)
     session.install(".")
+    session.install("intelhex")
     session.install("pytest")
     session.chdir("tests")
     session.run("pytest", "./")
@@ -40,6 +41,7 @@ def lint(session):
     session.install("pylint")
     # pyserial for avoiding a complaint by pylint
     session.install("pyserial")
+    session.install("intelhex")
     session.run("pylint", "stm32loader")
 
     session.install("flake8", "flake8-isort")
