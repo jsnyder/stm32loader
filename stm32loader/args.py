@@ -51,8 +51,8 @@ def parse_arguments(arguments):
         epilog="\n".join(
             [
                 "examples:",
-                "  %(prog)s -p COM7 -f F1",
-                "  %(prog)s -e -w -v example/main.bin",
+                "  %(prog)s --port COM7 --family F1",
+                "  %(prog)s --erase --write --verify example/main.bin",
             ]
         ),
         formatter_class=HelpFormatter,

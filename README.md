@@ -87,20 +87,20 @@ examples:
 ## Command-line example
 
 ```
-stm32loader -p /dev/tty.usbserial-ftCYPMYJ -e -w -v somefile.bin
+stm32loader --port /dev/tty.usbserial-ftCYPMYJ --erase --write --verify somefile.bin
 ```
 
 This will pre-erase flash, write `somefile.bin` to the flash on the device, and then
 perform a verification after writing is finished.
 
-You can skip the `-p` option by configuring environment variable
+You can skip the `--port` option by configuring environment variable
 `STM32LOADER_SERIAL_PORT`.
-Similarly, `-f` may be supplied through `STM32LOADER_FAMILY`.
+Similarly, `--family` may be supplied through `STM32LOADER_FAMILY`.
 
 To read out firmware and store it in a file:
 
 ```
-stm32loader -r -p /dev/cu.usbserial-A5XK3RJT -f F1 -l 0x10000 -a 0x08000000 dump.bin 
+stm32loader --read --port /dev/cu.usbserial-A5XK3RJT --family F1 --length 0x10000 --address 0x08000000 dump.bin 
 ```
 
 
