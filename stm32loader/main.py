@@ -27,6 +27,7 @@ import copy
 import os
 import sys
 from types import SimpleNamespace
+from pathlib import Path
 
 try:
     from progress.bar import ChargingBar as progress_bar
@@ -35,6 +36,7 @@ except ImportError:
 
 from stm32loader import __version__, bootloader
 from stm32loader.uart import SerialConnection
+from stm32loader.hexfile import load_hex
 
 DEFAULT_VERBOSITY = 5
 
@@ -323,8 +325,11 @@ class Stm32Loader:
         # pylint: disable=too-many-branches
         binary_data = None
         if self.configuration.write or self.configuration.verify:
-            with open(self.configuration.data_file, "rb") as read_file:
-                binary_data = bytearray(read_file.read())
+            data_file_path = Path(self.configuration.data_file)
+            if data_file_path.suffix == ".hex":
+                binary_data = load_hex(data_file_path)
+            else:
+                binary_data = data_file_path.read_bytes()
         if self.configuration.unprotect:
             try:
                 self.stm32.readout_unprotect()

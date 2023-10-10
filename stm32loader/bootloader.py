@@ -101,6 +101,10 @@ class DataMismatchError(Stm32LoaderError):
     """Exception: data comparison failed."""
 
 
+class MissingDependencyError(Stm32LoaderError):
+    """Exception: required dependency is missing."""
+
+
 class ShowProgress:
     """
     Show progress through a progress bar, as a context manager.

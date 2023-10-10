@@ -31,6 +31,9 @@ classifiers = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+hex = [
+    "intelhex",
+]
 dev = [
     "wheel",
     "twine",
