@@ -20,6 +20,7 @@
 """Talk to an STM32 native bootloader (see ST AN3155)."""
 
 
+import enum
 import math
 import operator
 import struct
@@ -172,7 +173,8 @@ class Stm32Bootloader:
 
     # pylint: disable=too-many-public-methods
 
-    class Command:
+    @enum.unique
+    class Command(enum.IntEnum):
         """STM32 native bootloader command values."""
 
         # pylint: disable=too-few-public-methods
@@ -192,10 +194,6 @@ class Stm32Bootloader:
         EXTENDED_ERASE = 0x44
         WRITE_PROTECT = 0x63
         WRITE_UNPROTECT = 0x73
-
-        # not used so far
-        READOUT_PROTECT = 0x82
-        READOUT_UNPROTECT = 0x92
 
         # not really listed under commands, but still...
         # 'wake the bootloader' == 'activate USART' == 'synchronize'
