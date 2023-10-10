@@ -111,6 +111,7 @@ class Stm32Loader:
     def perform_commands(self):
         """Run all operations as defined by the configuration."""
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
         binary_data = None
         if self.configuration.write or self.configuration.verify:
             data_file_path = Path(self.configuration.data_file)
