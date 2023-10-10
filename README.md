@@ -42,30 +42,34 @@ sys.stdout.close()
 sys.stdout = sys.__stdout__
 ]]] -->
 ```
-usage: stm32loader [-h] [-e] [-u] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD] [-a ADDRESS] [-g ADDRESS] [-f FAMILY] [-V] [-q] [-s] [-R] [-B] [-n] [-P {even,none}] [--version] [FILE.BIN]
+usage: stm32loader [-h] [-e] [-u] [-x] [-w] [-v] [-r] [-l LENGTH] -p PORT [-b BAUD] [-a ADDRESS] [-g ADDRESS] [-f FAMILY]
+                   [-V] [-q] [-s] [-R] [-B] [-n] [-P {even,none}] [--version]
+                   [FILE.BIN]
 
 Flash firmware to STM32 microcontrollers.
 
 positional arguments:
   FILE.BIN              File to read from or store to flash.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -e, --erase           Erase (note: this is required on previously written memory).
-  -u, --unprotect       Unprotect in case erase fails.
+  -u, --unprotect       Unprotect flash from readout.
+  -x, --protect         Protect flash against readout.
   -w, --write           Write file content to flash.
   -v, --verify          Verify flash content versus local file (recommended).
   -r, --read            Read from flash and store in local file.
   -l LENGTH, --length LENGTH
-                        Length of read.
+                        Length of read or erase.
   -p PORT, --port PORT  Serial port (default: $STM32LOADER_SERIAL_PORT).
   -b BAUD, --baud BAUD  Baudrate. (default: 115200)
   -a ADDRESS, --address ADDRESS
-                        Target address. (default: 134217728)
+                        Target address for read, write or erase. (default: 134217728)
   -g ADDRESS, --go-address ADDRESS
                         Start executing from address (0x08000000, usually).
   -f FAMILY, --family FAMILY
-                        Device family to read out device UID and flash size; e.g F1 for STM32F1xx (default: $STM32LOADER_FAMILY).
+                        Device family to read out device UID and flash size; e.g F1 for STM32F1xx. Possible values: F0,
+                        F1, F3, F4, F7, H7, L4, L0, G0, NRG. (default: $STM32LOADER_FAMILY).
   -V, --verbose         Verbose mode.
   -q, --quiet           Quiet mode.
   -s, --swap-rts-dtr    Swap RTS and DTR: use RTS for reset and DTR for boot0.
@@ -79,8 +83,8 @@ optional arguments:
   --version             show program's version number and exit
 
 examples:
-  stm32loader -p COM7 -f F1
-  stm32loader -e -w -v example/main.bin
+  stm32loader --port COM7 --family F1
+  stm32loader --erase --write --verify example/main.bin
 ```
 <!-- [[[end]]] -->
 

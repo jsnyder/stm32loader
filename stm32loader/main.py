@@ -122,8 +122,15 @@ class Stm32Loader:
             try:
                 self.stm32.readout_unprotect()
             except bootloader.CommandError:
-                # may be caused by readout protection
-                self.debug(0, "Erase failed -- probably due to readout protection")
+                self.debug(0, "Flash readout unprotect failed")
+                self.debug(0, "Quit")
+                self.stm32.reset_from_flash()
+                sys.exit(1)
+        if self.configuration.protect:
+            try:
+                self.stm32.readout_protect()
+            except bootloader.CommandError:
+                self.debug(0, "Flash readout protect failed")
                 self.debug(0, "Quit")
                 self.stm32.reset_from_flash()
                 sys.exit(1)

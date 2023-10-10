@@ -74,7 +74,11 @@ def parse_arguments(arguments):
     )
 
     parser.add_argument(
-        "-u", "--unprotect", action="store_true", help="Unprotect in case erase fails."
+        "-u", "--unprotect", action="store_true", help="Unprotect flash from readout."
+    )
+
+    parser.add_argument(
+        "-x", "--protect", action="store_true", help="Protect flash against readout."
     )
 
     parser.add_argument("-w", "--write", action="store_true", help="Write file content to flash.")
