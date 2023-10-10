@@ -179,7 +179,7 @@ def parse_arguments(arguments):
         action="store",
         type=str,
         default="even",
-        choices=["event", "none"],
+        choices=["even", "none"],
         help='Parity: "even" for STM32, "none" for BlueNRG.',
     )
 
