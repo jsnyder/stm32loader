@@ -137,9 +137,27 @@ class Stm32Loader:
                 sys.exit(1)
         if self.configuration.erase:
             try:
-                if self.configuration.address is None:
+                if self.configuration.length is None:
+                    if self.configuration.address is not None:
+                        self.debug(
+                            0,
+                            "Can not erase from specific address without specified length.\n"
+                            "Consider using the --length argument.",
+                        )
+                        self.stm32.reset_from_flash()
+                        sys.exit(1)
+                    # Address and length are given.
                     self.stm32.erase_memory()
                 else:
+                    # Address is None.
+                    if self.configuration.length is not None:
+                        self.debug(
+                            0,
+                            "Can not erase specific length without a start address.\n"
+                            "Consider using the --address argument.",
+                        )
+                        self.stm32.reset_from_flash()
+                        sys.exit(1)
                     start_address = self.configuration.address
                     end_address = self.configuration.address + self.configuration.length
                     self.stm32.erase_memory(from_to=(start_address, end_address))
