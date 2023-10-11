@@ -280,31 +280,20 @@ class Stm32Bootloader:
     }
 
     DATA_TRANSFER_SIZE = {
+        # In bytes.
         "default": 256,
-        # No unique id for these parts
-        "F0": 256,  # bytes
-        # ST RM0008 section 30.1 Unique device ID register
-        # F101, F102, F103, F105, F107
-        "F1": 256,  # bytes
-        # ST RM0366 section 29.1 Unique device ID register
-        # ST RM0365 section 34.1 Unique device ID register
-        # ST RM0316 section 34.1 Unique device ID register
-        # ST RM0313 section 32.1 Unique device ID register
-        # F303/328/358/398, F301/318, F302, F37x
-        "F3": 256,  # bytes
-        # ST RM0090 section 39.1 Unique device ID register
-        # F405/415, F407/417, F427/437, F429/439
-        "F4": 256,  # bytes
-        # ST RM0385 section 41.2 Unique device ID register
-        "F7": 256,  # bytes
-        # ST RM0394 47.1 Unique device ID register (96 bits)
-        "L4": 256,  # bytes
-        # ST RM0451 25.2 Unique device ID register (96 bits)
-        "L0": 128,  # bytes
-        # ST RM0444 section 38.1 Unique device ID register
-        "G0": 256,  # bytes
-        "WL": 256,  # bytes
+        "F0": 256,
+        "F1": 256,
+        "F3": 256,
+        "F4": 256,
+        "F7": 256,
+        "L4": 256,
+        "L0": 128,
+        "G0": 256,
+        "WL": 256,
         "NRG": 256,
+        # ST RM0433 section 4.2 FLASH main features
+        "H7": 256,
     }
 
     FLASH_PAGE_SIZE = {
@@ -336,6 +325,8 @@ class Stm32Bootloader:
         "WL": 1024,
         # ST BlueNRG-2 data sheet: 128 pages of 8 * 64 * 4 bytes
         "NRG": 2048,
+        # ST RM0433 section 4.2 FLASH main features
+        "H7": 128 * 1024,
     }
 
     SYNCHRONIZE_ATTEMPTS = 2
