@@ -56,13 +56,13 @@ SourceCode = "https://github.com/florisla/stm32loader"
 
 
 [tool.bumpversion]
-current_version = "0.7.0-dev"
+current_version = "0.7.0-dev0"
 commit = true
 tag = true
 message = "release: Bump version number from v{current_version} to v{new_version}"
-parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(-(?P<release>.+))?"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(-(?P<release>[^\\d]+)(?P<devrelease>\\d+))?"
 serialize = [
-    "{major}.{minor}.{patch}-{release}",
+    "{major}.{minor}.{patch}-{release}{devrelease}",
     "{major}.{minor}.{patch}",
 ]
 
@@ -75,9 +75,9 @@ values = [
 
 [[tool.bumpversion.files]]
 filename = "stm32loader/__init__.py"
-parse = "((?P<major>\\d+),\\s(?P<minor>\\d+),\\s(?P<patch>\\d+)(\\s*,\\s*'(?P<release>[^']+)')?)"
+parse = "((?P<major>\\d+),\\s(?P<minor>\\d+),\\s(?P<patch>\\d+)(\\s*,\\s*'(?P<release>[^']+)'\\s*,\\s*(?P<devrelease>\\d+))?)"
 serialize = [
-    "({major}, {minor}, {patch}, '{release}')",
+    "({major}, {minor}, {patch}, '{release}', {devrelease})",
     "({major}, {minor}, {patch})",
 ]
 search = "__version_info__ = {current_version}"
