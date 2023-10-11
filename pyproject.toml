@@ -86,7 +86,11 @@ replace = "__version_info__ = {new_version}"
 
 [tool.black]
 line-length = 98
-target-version = ['py34', 'py35', 'py36', 'py37', 'py38']
+target-version = [
+    "py39",
+    "py310",
+    "py311",
+]
 exclude = '''
 /(
     \.git
