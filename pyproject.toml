@@ -75,9 +75,9 @@ values = [
 
 [[tool.bumpversion.files]]
 filename = "stm32loader/__init__.py"
-parse = "((?P<major>\\d+),\\s(?P<minor>\\d+),\\s(?P<patch>\\d+)(\\s*,\\s*'(?P<release>[^']+)'\\s*,\\s*(?P<devrelease>\\d+))?)"
+parse = "\\((?P<major>\\d+),\\s(?P<minor>\\d+),\\s(?P<patch>\\d+)(\\s*,\\s*\"(?P<release>[^\"]+)\"\\s*,\\s*(?P<devrelease>\\d+))?\\)"
 serialize = [
-    "({major}, {minor}, {patch}, '{release}', {devrelease})",
+    "({major}, {minor}, {patch}, \"{release}\", {devrelease})",
     "({major}, {minor}, {patch})",
 ]
 search = "__version_info__ = {current_version}"
