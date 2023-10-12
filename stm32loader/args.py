@@ -72,8 +72,8 @@ def parse_arguments(arguments):
         action="store_true",
         help=(
             "Erase the full flash memory or a specific region (support --address and --length)."
-            " Note: this is required on previously written memory.",
-        )
+            " Note: this is required on previously written memory."
+        ),
     )
 
     parser.add_argument(
