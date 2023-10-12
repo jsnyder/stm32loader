@@ -56,9 +56,13 @@ CHIP_IDS = {
     # RM0090 in ( 38.6.1 MCU device ID code )
     0x413: "STM32F405xx/07xx and STM32F415xx/17xx",
     0x419: "STM32F42xxx and STM32F43xxx",
+    # AN2606
+    0x452: "STM32F72xxx/73xxx",
     0x449: "STM32F74xxx/75xxx",
-    0x450: "STM32H76xxx/77xxx",
     0x451: "STM32F76xxx/77xxx",
+    0x483: "STM32H72xxx/73xxx",
+    0x450: "STM32H74xxx/75xxx",
+    0x480: "STM32H7A3xx/B3xx",
     # RM0394 46.6.1 MCU device ID code
     0x435: "STM32L4xx",
     # ST BlueNRG series; see ST AN4872.
