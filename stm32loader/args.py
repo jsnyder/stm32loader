@@ -121,7 +121,9 @@ def parse_arguments(arguments):
         action="store",
         type=_auto_int,
         default=0x08000000,
-        help="Target address for read or write. For erase, this is used when you supply --length.",
+        help=(
+            "Target address for read or write. For erase, this is used when you supply --length."
+        ),
     )
 
     parser.add_argument(
