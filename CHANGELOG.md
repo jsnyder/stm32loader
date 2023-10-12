@@ -14,6 +14,8 @@ What changed in which version.
 * Adopt `flit` as build system.
 * Adopt `bump-my-version` as version bumper.
 
+### Fixed
+* Erasing was impossible due to --length not being supplied.
 
 ### Cleaned
 * Move argument-parsing code to separate file.
@@ -23,6 +25,8 @@ What changed in which version.
 
 
 ## [0.6.0] - 2023-10-09
+
+Yanked on 2023-10-12 due to bug when erasing.  Use 0.7.0 instead.
 
 ### Added
 * `#59` Continuous Integration: start running tests and linters on GitHub Actions.
