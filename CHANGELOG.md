@@ -3,25 +3,48 @@
 What changed in which version.
 
 
-## [0.6.0] - 2022-03-FIXME
+## [0.7.0] - 2023-10-12
+
+### Added
+* Support ST BlueNRG-1 and BlueNRG-2 devices.
+* Support ST STM32H7 series devices.
+* Allow to erase specific pages of flash memory.
+* Add command-line switch to protect flash against readout.
+* Support Intel hex file format.
+* Adopt `flit` as build system.
+* Adopt `bump-my-version` as version bumper.
+
+
+### Cleaned
+* Move argument-parsing code to separate file.
+* Use long-form argument names in help text and error messages.
+* Use IntEnum for commands and responses.
+
+
+
+## [0.6.0] - 2023-10-09
 
 ### Added
 * `#59` Continuous Integration: start running tests and linters on GitHub Actions.
 * `#42` `#43` Find flash size for non-standard MCUs (F4, L0).
-* Support STM32H76xxx/77xxx series.
+* Support STM32H7 series.
 * Packaging: auto-generate the help output using `cog`.
+* Support STM32WL.
+* Support Python 3.9 - 3.11.
 
 ### Changed
 * `#46` `#48` Flush the UART read buffer after MCU reset.
 * Use argparse instead of optparse.
-* Drop support for Python 2, 3.4, 3.5.
+* Drop support for Python 2, 3.4 - 3.8.
 
 ### Fixed
-* `#44` Support flash page count higher than 255.
+* `#44` Support flash page size higher than 255.
+* `#64` Properly parse address and length given as hexadecimal value.
+* `#62` Properly pass device family argument.
 
 ### Documented
 * `#13` Describe how to extend Stm32Loader.
-* `#52` Describe alternative was to execute the module.
+* `#52` Describe alternative ways to execute the module.
 * `#58` Add a list of similar tools.
 
 
