@@ -198,4 +198,3 @@ adapter (it needs to toggle, whereas `BOOT0` does not).
 
 * Use f-strings.
 * Use proper logging instead of print statements.
-* Start using `IntEnum` for commands and replies.

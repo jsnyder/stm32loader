@@ -203,7 +203,8 @@ class Stm32Bootloader:
         # 'wake the bootloader' == 'activate USART' == 'synchronize'
         SYNCHRONIZE = 0x7F
 
-    class Reply:
+    @enum.unique
+    class Reply(enum.IntEnum):
         """STM32 native bootloader reply status codes."""
 
         # pylint: disable=too-few-public-methods
