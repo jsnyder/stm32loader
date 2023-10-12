@@ -75,11 +75,11 @@ class Stm32Loader:
             print(str(e) + "\n", file=sys.stderr)
             print(
                 "Is the device connected and powered correctly?\n"
-                "Please use the -p option to select the correct serial port. Examples:\n"
-                "  -p COM3\n"
-                "  -p /dev/ttyS0\n"
-                "  -p /dev/ttyUSB0\n"
-                "  -p /dev/tty.usbserial-ftCYPMYJ\n",
+                "Please use the --port option to select the correct serial port. Examples:\n"
+                "  --port COM3\n"
+                "  --port /dev/ttyS0\n"
+                "  --port /dev/ttyUSB0\n"
+                "  --port /dev/tty.usbserial-ftCYPMYJ\n",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -150,8 +150,8 @@ class Stm32Loader:
                 # may be caused by readout protection
                 self.debug(
                     0,
-                    "Erase failed -- probably due to readout protection\n"
-                    "consider using the -u (unprotect) option.",
+                    "Erase failed -- probably due to readout protection.\n"
+                    "Consider using the --unprotect option.",
                 )
                 self.stm32.reset_from_flash()
                 sys.exit(1)
@@ -202,7 +202,7 @@ class Stm32Loader:
         """Show chip UID and flash size."""
         family = self.configuration.family
         if not family:
-            self.debug(0, "Supply -f [family] to see flash size and device UID, e.g: -f F1")
+            self.debug(0, "Supply --family to see flash size and device UID, e.g: -f F1")
             return
 
         try:
