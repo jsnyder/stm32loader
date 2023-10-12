@@ -70,7 +70,10 @@ def parse_arguments(arguments):
         "-e",
         "--erase",
         action="store_true",
-        help="Erase (note: this is required on previously written memory).",
+        help=(
+            "Erase the full flash memory or a specific region (support --address and --length)."
+            " Note: this is required on previously written memory.",
+        )
     )
 
     parser.add_argument(
@@ -118,7 +121,7 @@ def parse_arguments(arguments):
         action="store",
         type=_auto_int,
         default=0x08000000,
-        help="Target address for read, write or erase.",
+        help="Target address for read or write. For erase, this is used when you supply --length.",
     )
 
     parser.add_argument(
