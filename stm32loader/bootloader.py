@@ -610,8 +610,8 @@ class Stm32Bootloader:
             ), f"Erase end address should be at a flash page boundary: 0x{end_address:08X}."
 
             # Assemble the list of pages to erase.
-            first_page = start_address / self.flash_page_size
-            last_page = end_address / self.flash_page_size
+            first_page = start_address // self.flash_page_size
+            last_page = end_address // self.flash_page_size
             pages = list(range(first_page, last_page))
 
         if self.extended_erase:
