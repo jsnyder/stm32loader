@@ -40,7 +40,7 @@ FIRMWARE_FILE = os.path.join(HERE, "../../firmware/generic_boot20_pc13.binary.bi
 @pytest.fixture(scope="module")
 def stm32loader():
     def main_with_default_arguments(*args):
-        main("-p", SERIAL_PORT, "-b", str(BAUD_RATE), "-q", *args, avoid_system_exit=True)
+        main("--port", SERIAL_PORT, "--baud", str(BAUD_RATE), "--quiet", *args, avoid_system_exit=True)
     return main_with_default_arguments
 
 
@@ -68,9 +68,9 @@ def test_env_var_stm32loader_serial_port_defines_port(capsys):
     assert ("port 'COM109'" in captured.err or "port COM109" in captured.err)
 
 
-def test_argument_p_overrules_env_var_for_serial_port(capsys):
+def test_argument_port_overrules_env_var_for_serial_port(capsys):
     os.environ['STM32LOADER_SERIAL_PORT'] = "COM120"
-    main("-p", "COM121", avoid_system_exit=True)
+    main("--port", "COM121", avoid_system_exit=True)
     captured = capsys.readouterr()
     assert ("port 'COM121'" in captured.err or "port COM121" in captured.err)
 
@@ -85,8 +85,8 @@ def test_device_not_connected_prints_readable_error(stm32loader, capsys):
 
 
 @pytest.mark.hardware
-def test_argument_f_prints_chip_id_and_device_type(stm32loader, capsys):
-    stm32loader("-f", STM32_CHIP_FAMILY)
+def test_argument_family_prints_chip_id_and_device_type(stm32loader, capsys):
+    stm32loader("--family", STM32_CHIP_FAMILY)
     captured = capsys.readouterr()
     assert STM32_CHIP_ID in captured.err
     assert STM32_CHIP_TYPE in captured.err
@@ -94,14 +94,14 @@ def test_argument_f_prints_chip_id_and_device_type(stm32loader, capsys):
 
 @pytest.mark.hardware
 def test_read_produces_file_of_correct_length(stm32loader, dump_file):
-    stm32loader("-r", "-l", "1024", dump_file)
+    stm32loader("--read", "--length", "1024", dump_file)
     assert os.stat(dump_file).st_size == 1024
 
 
 @pytest.mark.hardware
 def test_erase_resets_memory_to_all_ones(stm32loader, dump_file):
     # erase
-    stm32loader("-e")
+    stm32loader("--erase")
     # read all bytes and check if they're 0xFF
     stm32loader("-r", "-l", "1024", dump_file)
     read_data = bytearray(open(dump_file, "rb").read())
@@ -111,10 +111,10 @@ def test_erase_resets_memory_to_all_ones(stm32loader, dump_file):
 @pytest.mark.hardware
 def test_write_saves_correct_data(stm32loader, dump_file):
     # erase and write
-    stm32loader("-e", "-w", FIRMWARE_FILE)
+    stm32loader("--erase", "--write", FIRMWARE_FILE)
 
     # read and compare data with file on disk
-    stm32loader("-r", "-l", str(SIZE), dump_file)
+    stm32loader("--read", "--length", str(SIZE), dump_file)
     read_data = open(dump_file, "rb").read()
     original_data = open(FIRMWARE_FILE, "rb").read()
 
@@ -129,4 +129,6 @@ def test_write_saves_correct_data(stm32loader, dump_file):
 
 @pytest.mark.hardware
 def test_erase_write_verify_passes(stm32loader):
-    stm32loader("-e", "-w", "-v", FIRMWARE_FILE)
+    stm32loader("--erase", "--write", "--verify", FIRMWARE_FILE)
+
+
