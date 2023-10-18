@@ -139,12 +139,13 @@ class Stm32Loader:
             try:
                 if self.configuration.length is None:
                     # Erase full device.
-                    self.stm32.erase_memory()
+                    self.stm32.erase_memory(pages=None)
                 else:
                     # Erase from address to address + length.
                     start_address = self.configuration.address
                     end_address = self.configuration.address + self.configuration.length
-                    self.stm32.erase_memory(from_to=(start_address, end_address))
+                    pages = self.stm32.pages_from_range(start_address, end_address)
+                    self.stm32.erase_memory(pages)
 
             except bootloader.CommandError:
                 # may be caused by readout protection

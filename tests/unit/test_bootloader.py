@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from stm32loader import bootloader as Stm32
-from stm32loader.bootloader import Stm32Bootloader
+from stm32loader.bootloader import Stm32Bootloader, PageIndexError
 
 # pylint: disable=missing-docstring, redefined-outer-name
 
@@ -128,9 +128,16 @@ def test_erase_memory_without_pages_sends_global_erase(bootloader, write):
     assert write.data_was_written(b'\xff\x00')
 
 
-def test_erase_memory_with_pages_sends_sector_count(bootloader, write):
+def test_erase_memory_with_pages_sends_sector_count_and_eight_bit_page_indices(bootloader, write):
     bootloader.erase_memory([0x11, 0x12, 0x13, 0x14])
     assert write.data_was_written(b'\x03')
+    assert write.data_was_written(b'\x11\x12\x13\x14')
+
+
+def test_extended_erase_memory_with_pages_sends_sector_count_and_sixteen_bit_page_indices(bootloader, write):
+    bootloader.extended_erase_memory([0x11, 0x12, 0x13, 0x14])
+    assert write.data_was_written(b'\x00\x03')
+    assert write.data_was_written(b'\x00\x11\x00\x12\x00\x13\x00\x14')
 
 
 def test_erase_memory_with_pages_sends_sector_addresses_with_checksum(bootloader, write):
@@ -254,3 +261,18 @@ def test_format_uid_returns_correct_string(bootloader, uid_string):
     uid, expected_description = uid_string
     description = bootloader.format_uid(uid)
     assert description == expected_description
+
+
+def test_get_pages_from_range_with_invalid_start_address_raises_page_index_error(bootloader):
+    with pytest.raises(PageIndexError, match=".*start address should be at a flash page boundary.*"):
+        bootloader.pages_from_range(10, 1024)
+
+
+def test_get_pages_from_range_with_start_address_zero_returns_single_page(bootloader):
+    pages = bootloader.pages_from_range(0, 1024)
+    assert pages == [0]
+
+
+def test_get_pages_from_large_range_returns_multiple_pages(bootloader):
+    pages = bootloader.pages_from_range(5*1024, 20*1024)
+    assert pages == list(range(5, 20))

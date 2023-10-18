@@ -590,7 +590,7 @@ class Stm32Bootloader:
         self.write_and_ack("0x31 programming failed", nr_of_bytes - 1, data, checksum)
         self.debug(10, "    Write memory done")
 
-    def erase_memory(self, pages=None, from_to=None):
+    def erase_memory(self, pages=None):
         """
         Erase flash memory at the given pages.
 
@@ -599,21 +599,6 @@ class Stm32Bootloader:
         :param iterable pages: Iterable of integer page addresses, zero-based.
           Set to None to trigger global mass erase.
         """
-        if pages is None and from_to is not None:
-            # Erase a specific memory region.
-            start_address, end_address = from_to
-            assert (
-                start_address % self.flash_page_size == 0
-            ), f"Erase start address should be at a flash page boundary: 0x{start_address:08X}."
-            assert (
-                end_address % self.flash_page_size == 0
-            ), f"Erase end address should be at a flash page boundary: 0x{end_address:08X}."
-
-            # Assemble the list of pages to erase.
-            first_page = start_address // self.flash_page_size
-            last_page = end_address // self.flash_page_size
-            pages = list(range(first_page, last_page))
-
         if self.extended_erase:
             # Use erase with two-byte addresses.
             self.extended_erase_memory(pages)
@@ -805,6 +790,24 @@ class Stm32Bootloader:
                     "First mismatch at address: 0x%X read 0x%X vs 0x%X expected."
                     % (address, bytearray([read_byte])[0], bytearray([reference_byte])[0])
                 )
+
+    def pages_from_range(self, start, end):
+        """Return page indices for the given memory range."""
+        if start % self.flash_page_size != 0:
+            raise PageIndexError(
+                f"Erase start address should be at a flash page boundary: 0x{start:08X}."
+            )
+        if end % self.flash_page_size != 0:
+            raise PageIndexError(
+                f"Erase end address should be at a flash page boundary: 0x{end:08X}."
+            )
+
+        # Assemble the list of pages to erase.
+        first_page = start // self.flash_page_size
+        last_page = end // self.flash_page_size
+        pages = list(range(first_page, last_page))
+
+        return pages
 
     def _reset(self):
         """Enable or disable the reset IO line (if possible)."""
