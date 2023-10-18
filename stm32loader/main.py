@@ -162,9 +162,9 @@ class Stm32Loader:
             read_data = self.stm32.read_memory_data(self.configuration.address, len(binary_data))
             try:
                 bootloader.Stm32Bootloader.verify_data(read_data, binary_data)
-                print("Verification OK")
+                print("Verification OK", file=sys.stderr)
             except bootloader.DataMismatchError as e:
-                print("Verification FAILED: %s" % e, file=sys.stdout)
+                print("Verification FAILED: %s" % e, file=sys.stderr)
                 sys.exit(1)
         if not self.configuration.write and self.configuration.read:
             read_data = self.stm32.read_memory_data(

@@ -671,7 +671,7 @@ class Stm32Bootloader:
 
         previous_timeout_value = self.connection.timeout
         self.connection.timeout = 30
-        print("Extended erase (0x44), this can take ten seconds or more")
+        print("Extended erase (0x44), this can take ten seconds or more", file=sys.stderr)
         try:
             self._wait_for_ack("0x44 erasing failed")
         finally:
