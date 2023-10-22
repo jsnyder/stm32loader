@@ -1,0 +1,7 @@
+include *.md
+include *.cfg
+include *.toml
+include LICENSE
+include .pylintrc
+include noxfile.py
+recursive-include tests *.py
